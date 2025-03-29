@@ -1,0 +1,37 @@
+// src/components/Camera/CameraFrame.scss
+.camera-container {
+    position: relative;
+    max-width: 800px;
+    margin: 0 auto;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  
+    &.night-mode {
+      filter: contrast(1.2) brightness(0.7) hue-rotate(45deg);
+    }
+  
+    video {
+      width: 100%;
+      display: block;
+    }
+  }
+  
+  .controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  
+    .capture-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }

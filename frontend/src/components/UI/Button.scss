@@ -1,0 +1,31 @@
+// src/components/UI/Button.scss
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    transition: all 0.2s;
+  
+    &.primary {
+      background: #4a6da7;
+      color: white;
+  
+      &:hover {
+        background: #3a5a80;
+      }
+    }
+  
+    &.outline {
+      background: transparent;
+      border: 1px solid #4a6da7;
+      color: #4a6da7;
+  
+      &:hover {
+        background: rgba(74, 109, 167, 0.1);
+      }
+    }
+  }
