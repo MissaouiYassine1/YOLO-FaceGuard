@@ -1,41 +1,49 @@
-// src/assets/styles/main.scss
+/* Styles globaux */
 body {
+  font-family: Arial, sans-serif;
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #2c3e50;
-  background-color: #f8f9fa;
+  padding: 0;
 }
 
-* {
-  box-sizing: border-box;
+.main-content {
+  min-height: 80vh;
+  padding: 20px;
 }
 
-h1, h2, h3 {
-  color: #2c3e50;
-}
-
-.error {
-  color: #dc3545;
-}
-/* Variables */
-$primary: #4a6da7;
-$night-bg: rgba(0, 0, 0, 0.7);
-
-.camera-container {
-  position: relative;
-  max-width: 800px;
+.page {
+  max-width: 1200px;
   margin: 0 auto;
-
-  &.night-vision {
-    filter: contrast(1.2) brightness(0.8) hue-rotate(45deg);
-  }
 }
 
-.face-card {
-  border: 2px solid $primary;
-  transition: transform 0.3s;
-  
-  &:hover {
-    transform: scale(1.05);
-  }
+/* Styles pour les cartes membres */
+.member-cards {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.member-card {
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 8px;
+  width: 200px;
+}
+
+/* Styles pour les résultats */
+.results-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.result-item {
+  border: 1px solid #eee;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.result-item img {
+  max-width: 100%;
+  height: auto;
 }
