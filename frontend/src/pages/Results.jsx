@@ -1,3 +1,4 @@
+import '../assets/styles/main.scss';
 const Results = () => {
     // Données simulées
     const detectionResults = [

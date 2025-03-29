@@ -1,3 +1,4 @@
+import '../assets/styles/main.scss';
 const Contact = () => {
     // Données des membres
     const teamMembers = [

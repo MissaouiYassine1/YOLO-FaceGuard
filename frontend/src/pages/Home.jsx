@@ -1,3 +1,4 @@
+import '../assets/styles/main.scss';
 const Home = () => {
     return (
       <div className="page home-page">
