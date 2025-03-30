@@ -1,5 +1,19 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import '../assets/styles/results.scss';
+import { 
+  IoVideocam as CameraIcon,
+  IoStop as StopIcon,
+  IoPause as PauseIcon,
+  IoPlay as PlayIcon,
+  IoSearch as SearchIcon,
+  IoStopCircle as StopCircleIcon,
+  IoExpand as ResizeIcon,
+  IoDownload as DownloadIcon,
+  IoTrash as TrashIcon,
+  IoSearchCircle as SearchCircleIcon,
+  IoPerson as PersonIcon,
+  IoStatsChart as StatsIcon
+} from 'react-icons/io5';
 
 const Results = () => {
   // Références
@@ -10,7 +24,7 @@ const Results = () => {
   
   // États
   const [detections, setDetections] = useState([]);
-  const [cameraState, setCameraState] = useState('stopped'); // 'stopped' | 'paused' | 'running'
+  const [cameraState, setCameraState] = useState('stopped');
   const [stream, setStream] = useState(null);
   const [isDetecting, setIsDetecting] = useState(false);
   const [fps, setFps] = useState(0);
@@ -21,7 +35,7 @@ const Results = () => {
     aspectRatio: 16/9
   });
   const [isResizing, setIsResizing] = useState(false);
-  const [presetSize, setPresetSize] = useState('medium'); // 'small' | 'medium' | 'large' | 'full'
+  const [presetSize, setPresetSize] = useState('medium');
 
   // Démarrer la caméra
   const startCamera = async () => {
@@ -49,7 +63,7 @@ const Results = () => {
             aspectRatio
           }));
           updateCanvasSize();
-          applyPresetSize('medium'); // Appliquer une taille par défaut
+          applyPresetSize('medium');
         };
       } else if (cameraState === 'paused') {
         resumeCamera();
@@ -77,7 +91,7 @@ const Results = () => {
     }
   };
 
-  // Arrêter complètement la caméra
+  // Arrêter la caméra
   const stopCamera = () => {
     stopDetection();
     
@@ -102,7 +116,7 @@ const Results = () => {
     }
   }, []);
 
-  // Démarrer la détection automatique
+  // Détection automatique
   const startDetection = () => {
     if (cameraState !== 'running') return;
     
@@ -122,12 +136,12 @@ const Results = () => {
       
       detectFaces();
       frameCount++;
-    }, 1000 / 30); // ~30 FPS
+    }, 1000 / 30);
 
     return () => clearInterval(detectionInterval);
   };
 
-  // Arrêter la détection automatique
+  // Arrêter la détection
   const stopDetection = () => {
     setIsDetecting(false);
   };
@@ -152,7 +166,7 @@ const Results = () => {
 
   // Générer des détections factices
   const generateMockDetections = (width, height) => {
-    if (Math.random() < 0.3) return []; // 30% de chance de ne rien détecter
+    if (Math.random() < 0.3) return [];
     
     const names = ["Yassin", "Emna", "Alex", "Sarah", "Mohamed", "Léa"];
     const count = Math.min(4, Math.floor(Math.random() * 3) + 1);
@@ -172,24 +186,21 @@ const Results = () => {
     });
   };
 
-  // Dessiner les rectangles de détection
+  // Dessiner les détections
   const drawDetections = (ctx, detections) => {
     ctx.lineWidth = 3;
     ctx.font = 'bold 14px Arial';
     
     detections.forEach(det => {
-      // Rectangle de détection
       ctx.strokeStyle = `hsl(${Math.round(det.confidence * 120)}, 80%, 50%)`;
       ctx.strokeRect(det.x, det.y, det.width, det.height);
       
-      // Fond pour le texte
       const text = `${det.name} ${Math.round(det.confidence * 100)}%`;
       const textWidth = ctx.measureText(text).width;
       
       ctx.fillStyle = 'rgba(3, 8, 16, 0.7)';
       ctx.fillRect(det.x - 1, det.y - 22, textWidth + 10, 20);
       
-      // Texte
       ctx.fillStyle = '#f3fbfd';
       ctx.fillText(text, det.x + 4, det.y - 6);
     });
@@ -222,41 +233,21 @@ const Results = () => {
     setPresetSize(size);
     const containerWidth = containerRef.current?.parentElement?.clientWidth || 800;
     
-    switch (size) {
-      case 'small':
-        setDimensions({
-          width: `${containerWidth * 0.5}px`,
-          height: 'auto',
-          aspectRatio: dimensions.aspectRatio
-        });
-        break;
-      case 'medium':
-        setDimensions({
-          width: `${containerWidth * 0.75}px`,
-          height: 'auto',
-          aspectRatio: dimensions.aspectRatio
-        });
-        break;
-      case 'large':
-        setDimensions({
-          width: `${containerWidth * 0.9}px`,
-          height: 'auto',
-          aspectRatio: dimensions.aspectRatio
-        });
-        break;
-      case 'full':
-        setDimensions({
-          width: '100%',
-          height: 'auto',
-          aspectRatio: dimensions.aspectRatio
-        });
-        break;
-      default:
-        break;
-    }
+    const sizes = {
+      small: 0.5,
+      medium: 0.75,
+      large: 0.9,
+      full: 1
+    };
+    
+    setDimensions({
+      width: size === 'full' ? '100%' : `${containerWidth * sizes[size]}px`,
+      height: 'auto',
+      aspectRatio: dimensions.aspectRatio
+    });
   };
 
-  // Gestion du redimensionnement manuel
+  // Gestion du redimensionnement
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isResizing || !containerRef.current) return;
@@ -274,9 +265,7 @@ const Results = () => {
       setPresetSize('custom');
     };
 
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
+    const handleMouseUp = () => setIsResizing(false);
 
     if (isResizing) {
       window.addEventListener('mousemove', handleMouseMove);
@@ -289,7 +278,7 @@ const Results = () => {
     };
   }, [isResizing, dimensions.aspectRatio]);
 
-  // Effet pour la détection automatique
+  // Détection automatique
   useEffect(() => {
     if (isDetecting && cameraState === 'running') {
       const cleanup = startDetection();
@@ -299,9 +288,7 @@ const Results = () => {
 
   // Nettoyage
   useEffect(() => {
-    return () => {
-      stopCamera();
-    };
+    return () => stopCamera();
   }, []);
 
   return (
@@ -326,22 +313,22 @@ const Results = () => {
             muted
             className={`video-preview ${cameraState === 'paused' ? 'paused' : ''}`}
           />
-          <canvas 
-            ref={canvasRef} 
-            className="detection-canvas"
-          />
+          <canvas ref={canvasRef} className="detection-canvas" />
           
           <div 
             ref={resizeHandleRef}
             className="resize-handle"
             onMouseDown={() => setIsResizing(true)}
           >
-            <i className="fas fa-arrows-alt-h"></i>
+            <ResizeIcon size={18} />
           </div>
           
           <div className="video-overlay">
             {cameraState === 'running' && isDetecting && (
-              <span className="fps-counter">{fps} FPS</span>
+              <span className="fps-counter">
+                <StatsIcon size={16} className="icon" />
+                {fps} FPS
+              </span>
             )}
             {lastDetectionTime && (
               <span className="last-detection">Dernière détection: {lastDetectionTime}</span>
@@ -350,24 +337,27 @@ const Results = () => {
         </div>
         
         <div className="controls">
-
           {cameraState === 'stopped' ? (
             <button onClick={startCamera} className="control-btn start-btn">
-              <i className="fas fa-video"></i> Démarrer
+              <CameraIcon size={18} className="icon" />
+              Démarrer
             </button>
           ) : (
             <>
               <button onClick={stopCamera} className="control-btn stop-btn">
-                <i className="fas fa-stop"></i> Arrêter
+                <StopIcon size={18} className="icon" />
+                Arrêter
               </button>
               
               {cameraState === 'running' ? (
                 <button onClick={pauseCamera} className="control-btn pause-btn">
-                  <i className="fas fa-pause"></i> Pause
+                  <PauseIcon size={18} className="icon" />
+                  Pause
                 </button>
               ) : (
                 <button onClick={resumeCamera} className="control-btn start-btn">
-                  <i className="fas fa-play"></i> Reprendre
+                  <PlayIcon size={18} className="icon" />
+                  Reprendre
                 </button>
               )}
               
@@ -376,7 +366,11 @@ const Results = () => {
                 className={`control-btn ${isDetecting ? 'active-btn' : 'detect-btn'}`}
                 disabled={cameraState !== 'running'}
               >
-                <i className={`fas fa-${isDetecting ? 'stop' : 'search'}`}></i>
+                {isDetecting ? (
+                  <StopCircleIcon size={18} className="icon" />
+                ) : (
+                  <SearchCircleIcon size={18} className="icon" />
+                )}
                 {isDetecting ? 'Arrêter détection' : 'Détection auto'}
               </button>
               
@@ -385,7 +379,8 @@ const Results = () => {
                 className="control-btn detect-btn"
                 disabled={cameraState !== 'running'}
               >
-                <i className="fas fa-search-plus"></i> Détecter
+                <SearchIcon size={18} className="icon" />
+                Détecter
               </button>
               
               {detections.length > 0 && (
@@ -393,37 +388,27 @@ const Results = () => {
                   onClick={saveDetections} 
                   className="control-btn save-btn"
                 >
-                  <i className="fas fa-save"></i> Sauvegarder
+                  <DownloadIcon size={18} className="icon" />
+                  Sauvegarder
                 </button>
               )}
             </>
           )}
         </div>
+        
         <div className="size-presets">
-          <button 
-            onClick={() => applyPresetSize('small')} 
-            className={`size-btn ${presetSize === 'small' ? 'active' : ''}`}
-          >
-            Petit
-          </button>
-          <button 
-            onClick={() => applyPresetSize('medium')} 
-            className={`size-btn ${presetSize === 'medium' ? 'active' : ''}`}
-          >
-            Moyen
-          </button>
-          <button 
-            onClick={() => applyPresetSize('large')} 
-            className={`size-btn ${presetSize === 'large' ? 'active' : ''}`}
-          >
-            Grand
-          </button>
-          <button 
-            onClick={() => applyPresetSize('full')} 
-            className={`size-btn ${presetSize === 'full' ? 'active' : ''}`}
-          >
-            Plein écran
-          </button>
+          {['small', 'medium', 'large', 'full'].map((size) => (
+            <button
+              key={size}
+              onClick={() => applyPresetSize(size)}
+              className={`size-btn ${presetSize === size ? 'active' : ''}`}
+            >
+              {size === 'small' && 'Petit'}
+              {size === 'medium' && 'Moyen'}
+              {size === 'large' && 'Grand'}
+              {size === 'full' && 'Plein écran'}
+            </button>
+          ))}
         </div>
       </div>
       
@@ -438,13 +423,15 @@ const Results = () => {
                   onClick={() => setDetections([])} 
                   className="action-btn clear-btn"
                 >
-                  <i className="fas fa-trash-alt"></i> Effacer
+                  <TrashIcon size={16} className="icon" />
+                  Effacer
                 </button>
                 <button 
                   onClick={saveDetections} 
                   className="action-btn save-btn"
                 >
-                  <i className="fas fa-download"></i> Exporter
+                  <DownloadIcon size={16} className="icon" />
+                  Exporter
                 </button>
               </>
             )}
@@ -476,7 +463,7 @@ const Results = () => {
           </div>
         ) : (
           <div className="empty-state">
-            <i className="fas fa-user-slash"></i>
+            <PersonIcon size={48} className="empty-icon" />
             <p>Aucune détection disponible</p>
             {cameraState === 'running' ? (
               <p>Cliquez sur "Détecter" pour analyser le flux vidéo</p>
