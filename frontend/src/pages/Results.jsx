@@ -1,11 +1,12 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import '../assets/styles/results.scss';
 
 const Results = () => {
   // Références
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const detectionIntervalRef = useRef(null);
+  const containerRef = useRef(null);
+  const resizeHandleRef = useRef(null);
   
   // États
   const [detections, setDetections] = useState([]);
@@ -14,6 +15,13 @@ const Results = () => {
   const [isDetecting, setIsDetecting] = useState(false);
   const [fps, setFps] = useState(0);
   const [lastDetectionTime, setLastDetectionTime] = useState(null);
+  const [dimensions, setDimensions] = useState({
+    width: '100%',
+    height: 'auto',
+    aspectRatio: 16/9
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const [presetSize, setPresetSize] = useState('medium'); // 'small' | 'medium' | 'large' | 'full'
 
   // Démarrer la caméra
   const startCamera = async () => {
@@ -33,10 +41,15 @@ const Results = () => {
         setStream(mediaStream);
         setCameraState('running');
         
-        // Attendre que la vidéo soit prête
         videoRef.current.onloadedmetadata = () => {
-          canvasRef.current.width = videoRef.current.videoWidth;
-          canvasRef.current.height = videoRef.current.videoHeight;
+          const video = videoRef.current;
+          const aspectRatio = video.videoWidth / video.videoHeight;
+          setDimensions(prev => ({
+            ...prev,
+            aspectRatio
+          }));
+          updateCanvasSize();
+          applyPresetSize('medium'); // Appliquer une taille par défaut
         };
       } else if (cameraState === 'paused') {
         resumeCamera();
@@ -81,6 +94,14 @@ const Results = () => {
     }
   };
 
+  // Mettre à jour la taille du canvas
+  const updateCanvasSize = useCallback(() => {
+    if (canvasRef.current && videoRef.current) {
+      canvasRef.current.width = videoRef.current.videoWidth;
+      canvasRef.current.height = videoRef.current.videoHeight;
+    }
+  }, []);
+
   // Démarrer la détection automatique
   const startDetection = () => {
     if (cameraState !== 'running') return;
@@ -89,7 +110,7 @@ const Results = () => {
     let frameCount = 0;
     let lastTime = performance.now();
     
-    detectionIntervalRef.current = setInterval(() => {
+    const detectionInterval = setInterval(() => {
       const now = performance.now();
       const deltaTime = now - lastTime;
       
@@ -102,47 +123,38 @@ const Results = () => {
       detectFaces();
       frameCount++;
     }, 1000 / 30); // ~30 FPS
+
+    return () => clearInterval(detectionInterval);
   };
 
   // Arrêter la détection automatique
   const stopDetection = () => {
-    if (detectionIntervalRef.current) {
-      clearInterval(detectionIntervalRef.current);
-      detectionIntervalRef.current = null;
-    }
     setIsDetecting(false);
   };
 
-  // Détection des visages (simulée)
-  const detectFaces = () => {
+  // Détection des visages
+  const detectFaces = useCallback(() => {
     if (!videoRef.current || cameraState !== 'running') return;
     
     const canvas = canvasRef.current;
     const video = videoRef.current;
     const ctx = canvas.getContext('2d');
     
-    // Ajuster la taille si nécessaire
-    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-    }
-    
-    // Dessiner l'image actuelle
+    updateCanvasSize();
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    // Simulation de détection
     const newDetections = generateMockDetections(canvas.width, canvas.height);
     drawDetections(ctx, newDetections);
     
-    setDetections(prev => [...prev, ...newDetections].slice(-20)); // Garder les 20 dernières
+    setDetections(prev => [...prev, ...newDetections].slice(-20));
     setLastDetectionTime(new Date().toLocaleTimeString());
-  };
+  }, [cameraState, updateCanvasSize]);
 
   // Générer des détections factices
   const generateMockDetections = (width, height) => {
     if (Math.random() < 0.3) return []; // 30% de chance de ne rien détecter
     
-    const names = ["Yassin", "Emna", "Alex", "Sarah", "Mohamed", "Léa", "Jean", "Marie"];
+    const names = ["Yassin", "Emna", "Alex", "Sarah", "Mohamed", "Léa"];
     const count = Math.min(4, Math.floor(Math.random() * 3) + 1);
     
     return Array.from({ length: count }, (_, i) => {
@@ -205,6 +217,86 @@ const Results = () => {
     URL.revokeObjectURL(url);
   };
 
+  // Appliquer une taille prédéfinie
+  const applyPresetSize = (size) => {
+    setPresetSize(size);
+    const containerWidth = containerRef.current?.parentElement?.clientWidth || 800;
+    
+    switch (size) {
+      case 'small':
+        setDimensions({
+          width: `${containerWidth * 0.5}px`,
+          height: 'auto',
+          aspectRatio: dimensions.aspectRatio
+        });
+        break;
+      case 'medium':
+        setDimensions({
+          width: `${containerWidth * 0.75}px`,
+          height: 'auto',
+          aspectRatio: dimensions.aspectRatio
+        });
+        break;
+      case 'large':
+        setDimensions({
+          width: `${containerWidth * 0.9}px`,
+          height: 'auto',
+          aspectRatio: dimensions.aspectRatio
+        });
+        break;
+      case 'full':
+        setDimensions({
+          width: '100%',
+          height: 'auto',
+          aspectRatio: dimensions.aspectRatio
+        });
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Gestion du redimensionnement manuel
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing || !containerRef.current) return;
+      
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const maxWidth = containerRef.current.parentElement.clientWidth;
+      const newWidth = Math.min(maxWidth, Math.max(300, e.clientX - containerRect.left));
+      const newHeight = newWidth / dimensions.aspectRatio;
+      
+      setDimensions({
+        width: `${newWidth}px`,
+        height: `${newHeight}px`,
+        aspectRatio: dimensions.aspectRatio
+      });
+      setPresetSize('custom');
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, dimensions.aspectRatio]);
+
+  // Effet pour la détection automatique
+  useEffect(() => {
+    if (isDetecting && cameraState === 'running') {
+      const cleanup = startDetection();
+      return cleanup;
+    }
+  }, [isDetecting, cameraState, detectFaces]);
+
   // Nettoyage
   useEffect(() => {
     return () => {
@@ -217,7 +309,16 @@ const Results = () => {
       <h2>Détection en Temps Réel</h2>
       
       <div className="realtime-section">
-        <div className="video-container">
+        <div 
+          ref={containerRef}
+          className="video-container"
+          style={{
+            width: dimensions.width,
+            height: dimensions.height,
+            maxWidth: '100%',
+            aspectRatio: dimensions.aspectRatio
+          }}
+        >
           <video 
             ref={videoRef} 
             autoPlay 
@@ -230,6 +331,14 @@ const Results = () => {
             className="detection-canvas"
           />
           
+          <div 
+            ref={resizeHandleRef}
+            className="resize-handle"
+            onMouseDown={() => setIsResizing(true)}
+          >
+            <i className="fas fa-arrows-alt-h"></i>
+          </div>
+          
           <div className="video-overlay">
             {cameraState === 'running' && isDetecting && (
               <span className="fps-counter">{fps} FPS</span>
@@ -241,6 +350,33 @@ const Results = () => {
         </div>
         
         <div className="controls">
+          <div className="size-presets">
+            <button 
+              onClick={() => applyPresetSize('small')} 
+              className={`size-btn ${presetSize === 'small' ? 'active' : ''}`}
+            >
+              Petit
+            </button>
+            <button 
+              onClick={() => applyPresetSize('medium')} 
+              className={`size-btn ${presetSize === 'medium' ? 'active' : ''}`}
+            >
+              Moyen
+            </button>
+            <button 
+              onClick={() => applyPresetSize('large')} 
+              className={`size-btn ${presetSize === 'large' ? 'active' : ''}`}
+            >
+              Grand
+            </button>
+            <button 
+              onClick={() => applyPresetSize('full')} 
+              className={`size-btn ${presetSize === 'full' ? 'active' : ''}`}
+            >
+              Plein écran
+            </button>
+          </div>
+
           {cameraState === 'stopped' ? (
             <button onClick={startCamera} className="control-btn start-btn">
               <i className="fas fa-video"></i> Démarrer
