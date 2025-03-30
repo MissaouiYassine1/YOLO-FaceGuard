@@ -350,32 +350,6 @@ const Results = () => {
         </div>
         
         <div className="controls">
-          <div className="size-presets">
-            <button 
-              onClick={() => applyPresetSize('small')} 
-              className={`size-btn ${presetSize === 'small' ? 'active' : ''}`}
-            >
-              Petit
-            </button>
-            <button 
-              onClick={() => applyPresetSize('medium')} 
-              className={`size-btn ${presetSize === 'medium' ? 'active' : ''}`}
-            >
-              Moyen
-            </button>
-            <button 
-              onClick={() => applyPresetSize('large')} 
-              className={`size-btn ${presetSize === 'large' ? 'active' : ''}`}
-            >
-              Grand
-            </button>
-            <button 
-              onClick={() => applyPresetSize('full')} 
-              className={`size-btn ${presetSize === 'full' ? 'active' : ''}`}
-            >
-              Plein écran
-            </button>
-          </div>
 
           {cameraState === 'stopped' ? (
             <button onClick={startCamera} className="control-btn start-btn">
@@ -424,6 +398,32 @@ const Results = () => {
               )}
             </>
           )}
+        </div>
+        <div className="size-presets">
+          <button 
+            onClick={() => applyPresetSize('small')} 
+            className={`size-btn ${presetSize === 'small' ? 'active' : ''}`}
+          >
+            Petit
+          </button>
+          <button 
+            onClick={() => applyPresetSize('medium')} 
+            className={`size-btn ${presetSize === 'medium' ? 'active' : ''}`}
+          >
+            Moyen
+          </button>
+          <button 
+            onClick={() => applyPresetSize('large')} 
+            className={`size-btn ${presetSize === 'large' ? 'active' : ''}`}
+          >
+            Grand
+          </button>
+          <button 
+            onClick={() => applyPresetSize('full')} 
+            className={`size-btn ${presetSize === 'full' ? 'active' : ''}`}
+          >
+            Plein écran
+          </button>
         </div>
       </div>
       
