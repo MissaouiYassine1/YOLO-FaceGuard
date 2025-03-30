@@ -13,7 +13,7 @@ const Contact = () => {
                 <img src={yassin} alt="Membre 1" />
                 <div className="member-info">
                     <h3>Yassin Missaoui</h3>
-                    <p>Développeur Web passionné.</p>
+                    <p>Développeur Full Stack.</p>
                     <a href="mailto:yassin.missaoui@enis.tn">yassin.missaoui@enis.tn</a>
                 </div>
             </div>
