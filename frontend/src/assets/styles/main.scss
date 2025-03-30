@@ -8,12 +8,12 @@
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.6;
-  color: #333;
-  background-color: #f5f5f5;
+  color: #f3fbfd;
+  background-color: #030810;
 }
 
 .main-content {
-  min-height: calc(100vh - 120px); /* Adjust based on header/footer height */
+  min-height: calc(100vh - 120px);
   padding: 2rem;
 }
 
@@ -21,138 +21,134 @@ body {
 .page {
   max-width: 1200px;
   margin: 0 auto;
-  background: white;
+  background: #0a101a; /* Slightly lighter dark background */
   padding: 2rem;
   border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  border: 1px solid #1a2a3a; /* Dark border */
 }
 
 .page h2 {
-  color: #2c3e50;
+  color: #f3fbfd;
   margin-bottom: 1.5rem;
   padding-bottom: 0.5rem;
-  border-bottom: 2px solid #3498db;
+  border-bottom: 2px solid #4ac7ef;
 }
 
-/* Home Page Specific */
+/* Home Page */
 .home-page {
   text-align: center;
-}
-
-.home-page p {
-  margin-bottom: 2rem;
-  font-size: 1.1rem;
+  
+  p {
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+    color: #987551;
+  }
 }
 
 .cta-button {
   display: inline-block;
-  background-color: #3498db;
-  color: white;
+  background-color: #4ac7ef;
+  color: #030810;
   padding: 0.8rem 1.5rem;
   border-radius: 4px;
   text-decoration: none;
   font-weight: bold;
   transition: background-color 0.3s;
+
+  &:hover {
+    background-color: #3ab0d6; /* Manually darkened blue */
+  }
 }
 
-.cta-button:hover {
-  background-color: #2980b9;
-}
-
-/* Contact Page Specific */
+/* Contact Page */
 .contact-form {
   margin-bottom: 2rem;
+
+  form {
+    display: grid;
+    gap: 1rem;
+    max-width: 500px;
+  }
+
+  input,
+  textarea {
+    padding: 0.8rem;
+    background: #0e1620; /* Dark input background */
+    border: 1px solid #4ac7ef;
+    border-radius: 4px;
+    width: 100%;
+    color: #f3fbfd;
+  }
+
+  button {
+    background-color: #987551;
+    color: #f3fbfd;
+    padding: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+
+    &:hover {
+      background-color: #876442; /* Manually darkened brown */
+    }
+  }
 }
 
-.contact-form form {
-  display: grid;
-  gap: 1rem;
-  max-width: 500px;
-}
-
-.contact-form input,
-.contact-form textarea {
-  padding: 0.8rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  width: 100%;
-}
-
-.contact-form button {
-  background-color: #2ecc71;
-  color: white;
-  border: none;
-  padding: 0.8rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.contact-form button:hover {
-  background-color: #27ae60;
-}
-
-.team-section h3 {
-  margin: 1.5rem 0 1rem;
-}
-
-.member-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.5rem;
-}
-
+/* Team Section */
 .member-card {
-  border: 1px solid #eee;
-  padding: 1.5rem;
-  border-radius: 8px;
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.member-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-.member-card h4 {
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
-}
-
-/* Results Page Specific */
-.results-summary {
-  background-color: #f8f9fa;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
-}
-
-.results-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.result-item {
-  border: 1px solid #eee;
+  background: #0e1620;
+  border: 1px solid #1a2a3a;
   padding: 1.5rem;
   border-radius: 8px;
   transition: transform 0.3s;
+
+  &:hover {
+    transform: translateY(-5px);
+    border-color: #4ac7ef;
+  }
+
+  h4 {
+    color: #f3fbfd;
+  }
+
+  p {
+    color: #987551;
+  }
 }
 
-.result-item:hover {
-  transform: scale(1.02);
-}
-
-.result-item img {
-  width: 100%;
-  height: auto;
+/* Results Page */
+.results-summary {
+  background: #0e1620;
+  padding: 1rem;
   border-radius: 4px;
-  margin: 1rem 0;
-  border: 1px solid #ddd;
+  margin-bottom: 1.5rem;
+  border-left: 3px solid #4ac7ef;
 }
 
-.result-item p {
-  margin: 0.5rem 0;
-  color: #555;
+.result-item {
+  background: #0e1620;
+  border: 1px solid #1a2a3a;
+  padding: 1.5rem;
+  border-radius: 8px;
+  transition: transform 0.3s;
+
+  &:hover {
+    transform: scale(1.02);
+  }
+
+  img {
+    border: 2px solid #4ac7ef;
+  }
+
+  p {
+    color: #987551;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem;
+  }
 }

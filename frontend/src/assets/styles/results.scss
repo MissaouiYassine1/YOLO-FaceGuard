@@ -2,18 +2,25 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
+    background: #030810; // Nouvelle couleur de fond
   
-    h2, h3 {
-      color: #2c3e50;
+    h2 {
+      color: #f3fbfd; // Nouvelle couleur pour les grands titres
+      margin-bottom: 1.5rem;
+    }
+  
+    h3 {
+      color: #987551; // Nouvelle couleur pour les sous-titres
       margin-bottom: 1.5rem;
     }
   }
   
   .realtime-section {
-    background: #f8f9fa;
+    background: lighten(#030810, 5%);
     border-radius: 8px;
     padding: 1.5rem;
     margin-bottom: 2rem;
+    border: 1px solid rgba(#4ac7ef, 0.1);
   }
   
   .video-container {
@@ -29,6 +36,7 @@
       width: 100%;
       height: 100%;
       border-radius: 4px;
+      border: 1px solid #4ac7ef; // Nouvelle couleur pour la bordure
     }
   
     .detection-canvas {
@@ -51,29 +59,29 @@
       transition: all 0.3s;
   
       &.start-btn {
-        background: #2ecc71;
-        color: white;
+        background: #4ac7ef; // Nouvelle couleur principale
+        color: #030810;
   
         &:hover {
-          background: #27ae60;
+          background: darken(#4ac7ef, 10%);
         }
       }
   
       &.stop-btn {
-        background: #e74c3c;
-        color: white;
+        background: #987551; // Nouvelle couleur secondaire
+        color: #f3fbfd;
   
         &:hover {
-          background: #c0392b;
+          background: darken(#987551, 10%);
         }
       }
   
       &.detect-btn {
-        background: #3498db;
-        color: white;
+        background: #4ac7ef;
+        color: #030810;
   
         &:hover {
-          background: #2980b9;
+          background: darken(#4ac7ef, 15%);
         }
       }
     }
@@ -90,33 +98,34 @@
     }
   
     .face-card {
-      background: white;
+      background: lighten(#030810, 8%);
       border-radius: 8px;
       padding: 1rem;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       display: flex;
       gap: 1rem;
       align-items: center;
+      border-left: 3px solid #4ac7ef;
   
       .face-info {
         flex: 1;
   
         h4 {
           margin: 0 0 0.5rem;
-          color: #2c3e50;
+          color: #f3fbfd;
         }
   
         p {
           margin: 0.2rem 0;
           font-size: 0.9rem;
-          color: #7f8c8d;
+          color: #987551;
         }
       }
   
       .face-preview {
         background-image: url('/images/detection-preview.jpg');
         background-size: cover;
-        border: 2px solid #3498db;
+        border: 2px solid #4ac7ef;
         border-radius: 4px;
       }
     }

@@ -10,13 +10,18 @@ export default defineConfig({
     },
   },
   server: {
-    host: true, // Nécessaire pour le chargement des assets HTML
+    host: true,
+    port: 3000,
     proxy: {
-      '/api': 'http://localhost:5000',
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
     },
   },
   build: {
-    assetsInclude: ['**/*.html'], // Inclure les fichiers HTML dans le build
+    assetsInclude: ['**/*.html'],
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
@@ -24,7 +29,16 @@ export default defineConfig({
       },
     },
   },
-  optimizeDeps: {
-    include: ['react', 'react-dom'],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `
+          $primary-blue: #4ac7ef;
+          $secondary-brown: #987551;
+          $light-bg: #f3fbfd;
+          $dark-bg: #030810;
+        `,
+      },
+    },
   },
 });
