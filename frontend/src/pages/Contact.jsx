@@ -1,69 +1,15 @@
-import { useEffect, useState } from 'react';
-import "../assets/styles/contact.css"
-
-const Contact = () => {
-  const [htmlContent, setHtmlContent] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const loadHtmlContent = async () => {
-      try {
-        const response = await fetch('contact.html');
-        if (!response.ok) throw new Error('Failed to load contact page');
-        
-        const html = await response.text();
-        const cleanedHtml = html
-          .replace(/<!DOCTYPE[\s\S]*?<body[^>]*>/i, '')
-          .replace(/<\/body>[\s\S]*<\/html>/i, '')
-          .trim();
-
-        setHtmlContent(cleanedHtml);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadHtmlContent();
-  }, []);
-
-  if (loading) return (
-    <div className="page-loading">
-      
-      <main className="loading-state">
-        <div className="spinner"></div>
-      </main>
-      
-    </div>
-  );
-
-  if (error) return (
-    <div className="page-error">
-      
-      <main className="error-state">
-        <p>Error: {error}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
-      </main>
-     
-    </div>
-  );
-
-  return (
-    <div className="contact-page">
-      
-      
-      <main className="contact-content">
-        <div 
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
-          className="html-content"
-        />
-      </main>
-      
-    
-    </div>
-  );
-};
-
-export default Contact;
+import '../assets/styles/contact.scss';
+import '../assets/styles/main.scss';
+const Home = () => {
+    return (
+      <div className="page home-page">
+        <h2>Bienvenue sur YOLO-FaceGuard</h2>
+        <p>Solution de détection faciale basée sur YOLO</p>
+        <div className="cta-section">
+          <a href="/results" className="cta-button">Voir les résultats</a>
+        </div>
+      </div>
+    );
+  };
+  
+  export default Home;
