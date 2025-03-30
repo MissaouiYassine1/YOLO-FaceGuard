@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import "../assets/styles/contact.css"
 
 const Contact = () => {
@@ -33,28 +31,28 @@ const Contact = () => {
 
   if (loading) return (
     <div className="page-loading">
-      <Header />
+      
       <main className="loading-state">
         <div className="spinner"></div>
       </main>
-      <Footer />
+      
     </div>
   );
 
   if (error) return (
     <div className="page-error">
-      <Header />
+      
       <main className="error-state">
         <p>Error: {error}</p>
         <button onClick={() => window.location.reload()}>Retry</button>
       </main>
-      <Footer />
+     
     </div>
   );
 
   return (
     <div className="contact-page">
-      <Header />
+      
       
       <main className="contact-content">
         <div 
@@ -63,7 +61,7 @@ const Contact = () => {
         />
       </main>
       
-      <Footer />
+    
     </div>
   );
 };

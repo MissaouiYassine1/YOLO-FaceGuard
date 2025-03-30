@@ -1,0 +1,136 @@
+.results-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  
+    h2, h3 {
+      color: #2c3e50;
+      margin-bottom: 1.5rem;
+    }
+  }
+  
+  .realtime-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .video-container {
+    position: relative;
+    width: 640px;
+    height: 480px;
+    margin: 0 auto 1.5rem;
+  
+    .video-preview, .detection-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 4px;
+    }
+  
+    .detection-canvas {
+      pointer-events: none;
+    }
+  }
+  
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+  
+    .control-btn {
+      padding: 0.8rem 1.5rem;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+  
+      &.start-btn {
+        background: #2ecc71;
+        color: white;
+  
+        &:hover {
+          background: #27ae60;
+        }
+      }
+  
+      &.stop-btn {
+        background: #e74c3c;
+        color: white;
+  
+        &:hover {
+          background: #c0392b;
+        }
+      }
+  
+      &.detect-btn {
+        background: #3498db;
+        color: white;
+  
+        &:hover {
+          background: #2980b9;
+        }
+      }
+    }
+  }
+  
+  .detection-results {
+    margin-top: 2rem;
+  
+    .faces-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+  
+    .face-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+  
+      .face-info {
+        flex: 1;
+  
+        h4 {
+          margin: 0 0 0.5rem;
+          color: #2c3e50;
+        }
+  
+        p {
+          margin: 0.2rem 0;
+          font-size: 0.9rem;
+          color: #7f8c8d;
+        }
+      }
+  
+      .face-preview {
+        background-image: url('/images/detection-preview.jpg');
+        background-size: cover;
+        border: 2px solid #3498db;
+        border-radius: 4px;
+      }
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .video-container {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4/3;
+    }
+  
+    .controls {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
