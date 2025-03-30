@@ -490,7 +490,33 @@
     opacity: 0.8;
   }
 }
+/* Ajouts pour les nouveaux états */
+.video-preview.paused {
+  filter: grayscale(80%);
+  opacity: 0.7;
+}
 
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  background: rgba(74, 199, 239, 0.1);
+  border-radius: 8px;
+  color: var(--primary-blue);
+}
+
+.control-btn i {
+  font-size: 0.9em;
+  margin-right: 8px;
+}
+
+.pause-btn {
+  background: #f39c12 !important;
+  color: var(--dark-bg) !important;
+
+  &:hover {
+    background: color.adjust(#f39c12, $lightness: -10%) !important;
+  }
+}
 /* Responsive Design - Enhanced */
 @media (max-width: 1200px) {
   .results-grid {
