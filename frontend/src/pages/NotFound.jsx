@@ -145,7 +145,7 @@ const NotFound = () => {
           
           <div className="error-tips">
             <div className="tip-card" tabIndex="0" aria-label="Astuce">
-              <RocketIcon className="tip-icon" aria-hidden="true" />
+              <RocketIcon className="tip-icon" aria-hidden="true"/>
               <p>Essayez notre moteur de recherche pour trouver ce que vous cherchez</p>
             </div>
             <div className="tip-card" tabIndex="0" aria-label="Astuce">

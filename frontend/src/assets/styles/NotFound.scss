@@ -346,12 +346,19 @@ $card-bg: #0a1420;
         transform: translateY(-5px);
         background: rgba($primary-blue, 0.15);
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        
+        /* Rotation des icônes au hover */
+        .tip-icon {
+          transform: rotate(5deg);
+        }
       }
 
       .tip-icon {
         font-size: clamp(1.5rem, 4vw, 2rem);
         margin-bottom: 1rem;
         color: $primary-blue;
+        transition: transform 0.3s ease;
+        display: inline-block;
       }
 
       p {
