@@ -320,7 +320,7 @@ const Results = () => {
           <div className="info-content">
             <h3>Informations sur la détection</h3>
             <ul>
-              <li><strong>Technologie :</strong> YOLO FaceGuard (version 2.1)</li>
+              <li><strong>Technologie :</strong> YOLO FaceGuard (version 1.0)</li>
               <li><strong>Précision :</strong> 92-96% selon les conditions</li>
               <li><strong>Latence :</strong> ~120ms par détection</li>
               <li><strong>Résolution :</strong> 1280x720 recommandée</li>
