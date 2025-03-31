@@ -1,5 +1,7 @@
 import '../assets/styles/main.scss';
+
 const Home = () => {
+    document.title = "YOLO FaceGuard";
     return (
       <div className="page home-page">
         <h2>Bienvenue sur YOLO-FaceGuard</h2>

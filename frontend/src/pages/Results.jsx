@@ -14,7 +14,7 @@ import {
   IoPerson as PersonIcon,
   IoStatsChart as StatsIcon
 } from 'react-icons/io5';
-
+document.title = "YOLO FaceGuard - Resultats";
 const Results = () => {
   // Références
   const videoRef = useRef(null);

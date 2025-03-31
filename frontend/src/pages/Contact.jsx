@@ -5,6 +5,7 @@ import emna from '../assets/images/team/emna.png';
 import maryem from '../assets/images/team/maryem.png';
 
 const Contact = () => {
+    document.title = "YOLO FaceGuard - Contact";
     return (
       <div className="page home-page">
         <h1>Notre Équipe</h1>
