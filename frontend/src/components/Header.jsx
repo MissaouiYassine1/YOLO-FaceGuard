@@ -14,9 +14,9 @@ const Header = () => {
         <h1>YOLO-FaceGuard</h1>
       </div>
       <nav>
-        <a href="/"><span>Home</span></a>
+        <a href="/"><span>Accueil</span></a>
         <a href="/contact"><span>Contact</span></a>
-        <a href="/results"><span>Results</span></a>
+        <a href="/results"><span>Résultats</span></a>
       </nav>
     </header>
   );
