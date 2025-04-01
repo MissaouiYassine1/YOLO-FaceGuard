@@ -14,37 +14,28 @@ export default defineConfig({
   },
 
   server: {
-    host: true, // Écoute sur toutes les interfaces
+    host: true,
     port: 3000,
-    strictPort: true, // Force le port 3000
-    open: true, // Ouvre le navigateur automatiquement
+    strictPort: true,
+    open: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000', // Port du backend FastAPI
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, ''),
-        configure: (proxy) => {
-          proxy.on('error', (err) => {
-            console.log('Proxy Error:', err);
-          });
-        }
       },
     },
   },
 
   build: {
-    outDir: '../dist', // Dossier de build personnalisé
+    outDir: '../dist',
     emptyOutDir: true,
-    assetsInlineLimit: 4096, // Taille max pour l'inlining des assets
     rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'index.html'),
-      },
       output: {
         manualChunks: {
           react: ['react', 'react-dom'],
-          vendor: ['axios', 'react-icons'],
+          vendors: ['axios', 'react-icons'],
         },
       },
     },
@@ -53,13 +44,9 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: `
-          @import "@assets/styles/_variables.scss";
-          $primary-blue: #4ac7ef;
-          $secondary-brown: #987551;
-          $light-bg: #f3fbfd;
-          $dark-bg: #030810;
-        `,
+        // Configuration minimale - seulement le compilateur Sass
+        // Aucune injection automatique de variables/mixins
+        additionalData: `` // Laissez vide pour désactiver l'injection
       },
     },
   },
