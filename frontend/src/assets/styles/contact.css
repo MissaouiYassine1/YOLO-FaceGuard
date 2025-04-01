@@ -1,0 +1,97 @@
+body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #030810;
+    text-align: center;
+    color: white;
+}
+h1 {
+    color: #f3fbfd;
+    font-size: 2.5em;
+    margin-top: 20px;
+    text-transform: uppercase;
+}
+.team-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    padding: 50px;
+    flex-wrap: wrap;
+}
+.member-card {
+display: flex;
+flex-direction: column;
+justify-content: center;   
+align-items: center;       
+background-color: transparent;
+border-radius: 15px;
+padding: 25px;
+box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.9), 0px 0px 20px rgba(74, 199, 239, 0.7);
+width: 320px;
+text-align: center;
+transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+backdrop-filter: blur(10px);
+}
+
+
+/*.member-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.9), 0px 0px 20px rgba(74, 199, 239, 0.7);
+    width: 320px;
+    text-align: center;
+    transition: transform 0.3s ease-in-out;
+    backdrop-filter: blur(10px);
+}*/
+.member-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.9), 0px 0px 25px rgba(255, 255, 255, 0.9);
+}
+.member-card img {
+width: 120px;
+height: 120px;
+border-radius: 50%;
+object-fit: cover;
+border: 4px solid #4ac7ef;
+display: block;            /* Makes the image a block element */
+margin: 0 auto;            /* Centers the image horizontally */
+}
+
+.member-card h3 {
+    margin: 15px 0 8px;
+    color: rgb(255, 255, 255);
+    font-size: 1.4em;
+}
+.member-card p {
+    font-size: 14px;
+    color: white;
+    margin-bottom: 10px;
+}
+.member-card a {
+    text-decoration: none;
+    color: #4ac7ef;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 15px;
+    transition: color 0.3s;
+}
+.member-card a:hover {
+    color: #3aa7c4;
+}
+.member-card button {
+    padding: 12px 25px;
+    background-color: #4ac7ef;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+.member-card button:hover {
+    background-color: #3aa7c4;
+}

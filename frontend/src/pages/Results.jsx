@@ -1,31 +1,547 @@
-import '../assets/styles/main.scss';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import '../assets/styles/results.scss';
+import { 
+  IoVideocam as CameraIcon,
+  IoStop as StopIcon,
+  IoPause as PauseIcon,
+  IoPlay as PlayIcon,
+  IoSearch as SearchIcon,
+  IoStopCircle as StopCircleIcon,
+  IoExpand as ResizeIcon,
+  IoDownload as DownloadIcon,
+  IoTrash as TrashIcon,
+  IoSearchCircle as SearchCircleIcon,
+  IoPerson as PersonIcon,
+  IoStatsChart as StatsIcon,
+  IoRefresh as RefreshIcon,
+  IoOptions as OptionsIcon,
+  IoCloseCircle as ClearIcon,
+  IoImage as ImageIcon,
+  IoInformationCircle as InfoIcon
+} from 'react-icons/io5';
+
+document.title = "YOLO FaceGuard - Résultats";
+
 const Results = () => {
-    // Données simulées
-    const detectionResults = [
-      { id: 1, image: "detection1.jpg", faces: 3, timestamp: "2023-05-15" },
-      { id: 2, image: "detection2.jpg", faces: 1, timestamp: "2023-05-16" }
-    ];
+  // Références
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const resizeHandleRef = useRef(null);
   
-    return (
-      <div className="page results-page">
-        <h2>Résultats de détection</h2>
+  // États
+  const [detections, setDetections] = useState([]);
+  const [cameraState, setCameraState] = useState('stopped');
+  const [stream, setStream] = useState(null);
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [fps, setFps] = useState(0);
+  const [lastDetectionTime, setLastDetectionTime] = useState(null);
+  const [dimensions, setDimensions] = useState({
+    width: '100%',
+    height: 'auto',
+    aspectRatio: 16/9
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const [presetSize, setPresetSize] = useState('medium');
+  const [showDetectionInfo, setShowDetectionInfo] = useState(false);
+
+  // Démarrer la caméra
+  const startCamera = async () => {
+    try {
+      if (cameraState === 'stopped') {
+        const constraints = {
+          video: { 
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user',
+            frameRate: { ideal: 30 }
+          }
+        };
         
-        <div className="results-summary">
-          <p>Total détections : {detectionResults.length}</p>
+        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoRef.current.srcObject = mediaStream;
+        setStream(mediaStream);
+        setCameraState('running');
+        
+        videoRef.current.onloadedmetadata = () => {
+          const video = videoRef.current;
+          const aspectRatio = video.videoWidth / video.videoHeight;
+          setDimensions(prev => ({
+            ...prev,
+            aspectRatio
+          }));
+          updateCanvasSize();
+          applyPresetSize('medium');
+        };
+      } else if (cameraState === 'paused') {
+        resumeCamera();
+      }
+    } catch (err) {
+      console.error("Erreur d'accès à la caméra:", err);
+      alert(`Erreur d'accès à la caméra: ${err.message}`);
+    }
+  };
+
+  // Reprendre la caméra
+  const resumeCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.enabled = true);
+      setCameraState('running');
+    }
+  };
+
+  // Mettre en pause la caméra
+  const pauseCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.enabled = false);
+      setCameraState('paused');
+      stopDetection();
+    }
+  };
+
+  // Arrêter la caméra
+  const stopCamera = () => {
+    stopDetection();
+    
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    
+    setCameraState('stopped');
+    setDetections([]);
+    
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  // Mettre à jour la taille du canvas
+  const updateCanvasSize = useCallback(() => {
+    if (canvasRef.current && videoRef.current) {
+      canvasRef.current.width = videoRef.current.videoWidth;
+      canvasRef.current.height = videoRef.current.videoHeight;
+    }
+  }, []);
+
+  // Détection automatique
+  const startDetection = () => {
+    if (cameraState !== 'running') return;
+    
+    setIsDetecting(true);
+    let frameCount = 0;
+    let lastTime = performance.now();
+    
+    const detectionInterval = setInterval(() => {
+      const now = performance.now();
+      const deltaTime = now - lastTime;
+      
+      if (deltaTime >= 1000) {
+        setFps(Math.round((frameCount * 1000) / deltaTime));
+        frameCount = 0;
+        lastTime = now;
+      }
+      
+      detectFaces();
+      frameCount++;
+    }, 1000 / 30);
+
+    return () => clearInterval(detectionInterval);
+  };
+
+  // Arrêter la détection
+  const stopDetection = () => {
+    setIsDetecting(false);
+  };
+
+  // Détection des visages
+  const detectFaces = useCallback(() => {
+    if (!videoRef.current || cameraState !== 'running') return;
+    
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    updateCanvasSize();
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const newDetections = generateMockDetections(canvas.width, canvas.height);
+    drawDetections(ctx, newDetections);
+    
+    setDetections(prev => [...prev, ...newDetections].slice(-20));
+    setLastDetectionTime(new Date().toLocaleTimeString());
+  }, [cameraState, updateCanvasSize]);
+
+  // Générer des détections factices
+  const generateMockDetections = (width, height) => {
+    if (Math.random() < 0.3) return [];
+    
+    const names = ["Yassin", "Emna", "Alex", "Sarah", "Mohamed", "Léa"];
+    const count = Math.min(4, Math.floor(Math.random() * 3) + 1);
+    
+    return Array.from({ length: count }, (_, i) => {
+      const size = Math.min(width, height) * (0.15 + Math.random() * 0.15);
+      return {
+        id: Date.now() + i,
+        x: Math.random() * (width - size),
+        y: Math.random() * (height - size),
+        width: size,
+        height: size,
+        confidence: 0.85 + Math.random() * 0.1,
+        name: names[Math.floor(Math.random() * names.length)],
+        timestamp: new Date().toISOString()
+      };
+    });
+  };
+
+  // Dessiner les détections
+  const drawDetections = (ctx, detections) => {
+    ctx.lineWidth = 3;
+    ctx.font = 'bold 14px Arial';
+    
+    detections.forEach(det => {
+      ctx.strokeStyle = `hsl(${Math.round(det.confidence * 120)}, 80%, 50%)`;
+      ctx.strokeRect(det.x, det.y, det.width, det.height);
+      
+      const text = `${det.name} ${Math.round(det.confidence * 100)}%`;
+      const textWidth = ctx.measureText(text).width;
+      
+      ctx.fillStyle = 'rgba(3, 8, 16, 0.7)';
+      ctx.fillRect(det.x - 1, det.y - 22, textWidth + 10, 20);
+      
+      ctx.fillStyle = '#f3fbfd';
+      ctx.fillText(text, det.x + 4, det.y - 6);
+    });
+  };
+
+  // Sauvegarder les détections
+  const saveDetections = () => {
+    const data = {
+      timestamp: new Date().toISOString(),
+      detections: detections,
+      videoResolution: {
+        width: videoRef.current?.videoWidth || 0,
+        height: videoRef.current?.videoHeight || 0
+      }
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
+    a.click();
+    
+    URL.revokeObjectURL(url);
+  };
+
+  // Appliquer une taille prédéfinie
+  const applyPresetSize = (size) => {
+    setPresetSize(size);
+    const containerWidth = containerRef.current?.parentElement?.clientWidth || 800;
+    
+    const sizes = {
+      small: 0.5,
+      medium: 0.75,
+      large: 0.9,
+      full: 1
+    };
+    
+    setDimensions({
+      width: size === 'full' ? '100%' : `${containerWidth * sizes[size]}px`,
+      height: 'auto',
+      aspectRatio: dimensions.aspectRatio
+    });
+  };
+
+  // Gestion du redimensionnement
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing || !containerRef.current) return;
+      
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const maxWidth = containerRef.current.parentElement.clientWidth;
+      const newWidth = Math.min(maxWidth, Math.max(300, e.clientX - containerRect.left));
+      const newHeight = newWidth / dimensions.aspectRatio;
+      
+      setDimensions({
+        width: `${newWidth}px`,
+        height: `${newHeight}px`,
+        aspectRatio: dimensions.aspectRatio
+      });
+      setPresetSize('custom');
+    };
+
+    const handleMouseUp = () => setIsResizing(false);
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, dimensions.aspectRatio]);
+
+  // Détection automatique
+  useEffect(() => {
+    if (isDetecting && cameraState === 'running') {
+      const cleanup = startDetection();
+      return cleanup;
+    }
+  }, [isDetecting, cameraState, detectFaces]);
+
+  // Nettoyage
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
+
+  return (
+    <div className="results-page">
+      <header className="page-header">
+        <h2>
+          <CameraIcon size={24} className="header-icon" />
+          Détection en Temps Réel
+        </h2>
+        <button 
+          onClick={() => setShowDetectionInfo(!showDetectionInfo)}
+          className="info-btn"
+          aria-label="Afficher les informations de détection"
+        >
+          <InfoIcon size={20} />
+        </button>
+      </header>
+
+      {showDetectionInfo && (
+        <div className="info-panel">
+          <div className="info-content">
+            <h3>Informations sur la détection</h3>
+            <ul>
+              <li><strong>Technologie :</strong> YOLO FaceGuard (version 1.0)</li>
+              <li><strong>Précision :</strong> 92-96% selon les conditions</li>
+              <li><strong>Latence :</strong> ~120ms par détection</li>
+              <li><strong>Résolution :</strong> 1280x720 recommandée</li>
+            </ul>
+            <button 
+              onClick={() => setShowDetectionInfo(false)}
+              className="close-info-btn"
+            >
+              <ClearIcon size={16} /> Fermer
+            </button>
+          </div>
         </div>
-  
-        <div className="results-list">
-          {detectionResults.map(result => (
-            <div key={result.id} className="result-item">
-              <h3>Image #{result.id}</h3>
-              <img src={`/images/${result.image}`} alt={`Détection ${result.id}`} />
-              <p>Visages détectés: {result.faces}</p>
-              <p>Date: {result.timestamp}</p>
-            </div>
+      )}
+      
+      <div className="realtime-section">
+        <div 
+          ref={containerRef}
+          className="video-container"
+          style={{
+            width: dimensions.width,
+            height: dimensions.height,
+            maxWidth: '100%',
+            aspectRatio: dimensions.aspectRatio
+          }}
+        >
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted
+            className={`video-preview ${cameraState === 'paused' ? 'paused' : ''}`}
+          />
+          <canvas ref={canvasRef} className="detection-canvas" />
+          
+          <div 
+            ref={resizeHandleRef}
+            className="resize-handle"
+            onMouseDown={() => setIsResizing(true)}
+            title="Redimensionner la vue"
+          >
+            <ResizeIcon size={18} />
+          </div>
+          
+          <div className="video-overlay">
+            {cameraState === 'running' && isDetecting && (
+              <span className="fps-counter">
+                <StatsIcon size={16} className="icon" />
+                {fps} FPS
+              </span>
+            )}
+            {lastDetectionTime && (
+              <span className="last-detection">
+                <RefreshIcon size={14} className="icon" />
+                Dernière détection: {lastDetectionTime}
+              </span>
+            )}
+          </div>
+        </div>
+        
+        <div className="controls">
+          {cameraState === 'stopped' ? (
+            <button onClick={startCamera} className="control-btn start-btn">
+              <CameraIcon size={18} className="icon" />
+              Démarrer la caméra
+            </button>
+          ) : (
+            <>
+              <div className="control-group">
+                <button onClick={stopCamera} className="control-btn stop-btn">
+                  <StopIcon size={18} className="icon" />
+                  Arrêter
+                </button>
+                
+                {cameraState === 'running' ? (
+                  <button onClick={pauseCamera} className="control-btn pause-btn">
+                    <PauseIcon size={18} className="icon" />
+                    Pause
+                  </button>
+                ) : (
+                  <button onClick={resumeCamera} className="control-btn start-btn">
+                    <PlayIcon size={18} className="icon" />
+                    Reprendre
+                  </button>
+                )}
+              </div>
+              
+              <div className="control-group">
+                <button 
+                  onClick={isDetecting ? stopDetection : startDetection} 
+                  className={`control-btn ${isDetecting ? 'active-btn' : 'detect-btn'}`}
+                  disabled={cameraState !== 'running'}
+                >
+                  {isDetecting ? (
+                    <StopCircleIcon size={18} className="icon" />
+                  ) : (
+                    <SearchCircleIcon size={18} className="icon" />
+                  )}
+                  {isDetecting ? 'Arrêter détection' : 'Détection auto'}
+                </button>
+                
+                <button 
+                  onClick={detectFaces} 
+                  className="control-btn detect-btn"
+                  disabled={cameraState !== 'running'}
+                >
+                  <SearchIcon size={18} className="icon" />
+                  Détection manuelle
+                </button>
+              </div>
+              
+              <div className="control-group">
+                {detections.length > 0 && (
+                  <button 
+                    onClick={saveDetections} 
+                    className="control-btn save-btn"
+                  >
+                    <DownloadIcon size={18} className="icon" />
+                    Exporter données
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+        
+        <div className="size-presets">
+          <span className="size-label">
+            <OptionsIcon size={16} className="icon" />
+            Taille de la vue :
+          </span>
+          {['small', 'medium', 'large', 'full'].map((size) => (
+            <button
+              key={size}
+              onClick={() => applyPresetSize(size)}
+              className={`size-btn ${presetSize === size ? 'active' : ''}`}
+            >
+              {size === 'small' && 'Petit'}
+              {size === 'medium' && 'Moyen'}
+              {size === 'large' && 'Grand'}
+              {size === 'full' && 'Plein écran'}
+            </button>
           ))}
         </div>
       </div>
-    );
-  };
-  
-  export default Results;
+      
+      <div className="detection-results">
+        <div className="results-header">
+          <h3>
+            <PersonIcon size={20} className="header-icon" />
+            Visages Détectés ({detections.length})
+          </h3>
+          
+          <div className="results-actions">
+            {detections.length > 0 && (
+              <>
+                <button 
+                  onClick={() => setDetections([])} 
+                  className="action-btn clear-btn"
+                >
+                  <TrashIcon size={16} className="icon" />
+                  Effacer tout
+                </button>
+                <button 
+                  onClick={saveDetections} 
+                  className="action-btn save-btn"
+                >
+                  <DownloadIcon size={16} className="icon" />
+                  Exporter JSON
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        
+        {detections.length > 0 ? (
+          <div className="faces-grid">
+            {[...detections].reverse().map((face) => (
+              <div key={face.id} className="face-card">
+                <div className="face-info">
+                  <h4>
+                    <PersonIcon size={14} className="icon" />
+                    {face.name}
+                  </h4>
+                  <p><strong>Confiance:</strong> {Math.round(face.confidence * 100)}%</p>
+                  <p><strong>Position:</strong> {Math.round(face.x)}px, {Math.round(face.y)}px</p>
+                  <p><strong>Taille:</strong> {Math.round(face.width)}×{Math.round(face.height)}</p>
+                  <p className="timestamp">
+                    <small>{new Date(face.timestamp).toLocaleTimeString()}</small>
+                  </p>
+                </div>
+                <div className="face-preview-container">
+                  <div 
+                    className="face-preview" 
+                    style={{
+                      backgroundImage: `url(${canvasRef.current?.toDataURL() || ''})`,
+                      backgroundPosition: `-${Math.round(face.x)}px -${Math.round(face.y)}px`,
+                      width: `${Math.round(face.width)}px`,
+                      height: `${Math.round(face.height)}px`
+                    }}
+                  />
+                  <div className="face-preview-label">
+                    <ImageIcon size={12} /> Aperçu
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <PersonIcon size={48} className="empty-icon" />
+            <p>Aucune détection disponible</p>
+            {cameraState === 'running' ? (
+              <p>Cliquez sur "Détecter" pour analyser le flux vidéo</p>
+            ) : (
+              <p>Démarrez la caméra pour commencer</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Results;

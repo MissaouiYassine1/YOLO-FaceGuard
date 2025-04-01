@@ -1,39 +1,42 @@
+import '../assets/styles/contact.css';
 import '../assets/styles/main.scss';
+import yassin from '../assets/images/team/yassin.png';
+import emna from '../assets/images/team/emna.png';
+import maryem from '../assets/images/team/maryem.png';
+
 const Contact = () => {
-    // Données des membres
-    const teamMembers = [
-      { id: 1, name: "Jean Dupont", role: "Développeur", email: "jean@example.com" },
-      { id: 2, name: "Marie Martin", role: "Designer", email: "marie@example.com" }
-    ];
-  
+    document.title = "YOLO FaceGuard - Contact";
     return (
-      <div className="page contact-page">
-        <h2>Contactez notre équipe</h2>
-        
-        <section className="contact-form">
-          <h3>Formulaire de contact</h3>
-          <form>
-            <input type="text" placeholder="Votre nom" />
-            <input type="email" placeholder="Votre email" />
-            <textarea placeholder="Votre message"></textarea>
-            <button type="submit">Envoyer</button>
-          </form>
-        </section>
-  
-        <section className="team-section">
-          <h3>Notre équipe</h3>
-          <div className="member-cards">
-            {teamMembers.map(member => (
-              <div key={member.id} className="member-card">
-                <h4>{member.name}</h4>
-                <p>{member.role}</p>
-                <p>{member.email}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+      <div className="page home-page">
+        <h1>Notre Équipe</h1>
+        <div className="team-container">
+            <div className="member-card">
+                <img src={yassin} alt="Membre 1" />
+                <div className="member-info">
+                    <h3>Yassin Missaoui</h3>
+                    <p>Développeur Full Stack.</p>
+                    <a href="mailto:yassin.missaoui@enis.tn">yassin.missaoui@enis.tn</a>
+                </div>
+            </div>
+            <div className="member-card">
+                <img src={emna} alt="Membre 2" />
+                <div className="member-info">
+                    <h3>Emna Kaanich</h3>
+                    <p>Experte en gestion de projet.</p>
+                    <a href="mailto:emna.kaanich@enis.tn">emna.kaanich@enis.tn</a>
+                </div>
+            </div>
+            <div className="member-card">
+                <img src={maryem} alt="Membre 3" />
+                <div className="member-info">
+                    <h3>Maryem Kbayer</h3>
+                    <p>Spécialiste UX/UI.</p>
+                    <a href="mailto:mariem.kbaier@enis.tn">mariem.kbaier@enis.tn</a>
+                </div>
+            </div>
+        </div>
       </div>
     );
-  };
-  
-  export default Contact;
+};
+
+export default Contact;
