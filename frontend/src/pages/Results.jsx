@@ -37,13 +37,15 @@ const Results = () => {
   const [fps, setFps] = useState(0);
   const [lastDetectionTime, setLastDetectionTime] = useState(null);
   const [dimensions, setDimensions] = useState({
-    width: '100%',
+    width: '400px',
     height: 'auto',
     aspectRatio: 16/9
   });
   const [isResizing, setIsResizing] = useState(false);
-  const [presetSize, setPresetSize] = useState('medium');
+  const [presetSize, setPresetSize] = useState('small');
   const [showDetectionInfo, setShowDetectionInfo] = useState(false);
+  const [userSelectedSize, setUserSelectedSize] = useState(null);
+  const [frozenDetectionTime, setFrozenDetectionTime] = useState(null);
 
   // Démarrer la caméra
   const startCamera = async () => {
@@ -71,7 +73,7 @@ const Results = () => {
             aspectRatio
           }));
           updateCanvasSize();
-          applyPresetSize('medium');
+          applyPresetSize(userSelectedSize || 'small');
         };
       } else if (cameraState === 'paused') {
         resumeCamera();
@@ -114,6 +116,8 @@ const Results = () => {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    
+    applyPresetSize('small');
   };
 
   // Mettre à jour la taille du canvas
@@ -124,6 +128,37 @@ const Results = () => {
     }
   }, []);
 
+  // Envoyer une image au backend
+  const sendFrameToBackend = async () => {
+    try {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      const ctx = canvas.getContext('2d');
+      
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob(resolve, 'image/jpeg', 0.9);
+      });
+
+      const formData = new FormData();
+      formData.append('file', blob, 'frame.jpg');
+
+      const response = await fetch('http://localhost:8000/api/detect', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Erreur de détection');
+
+      const data = await response.json();
+      return data.faces || [];
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi au backend:', error);
+      return [];
+    }
+  };
+
   // Détection automatique
   const startDetection = () => {
     if (cameraState !== 'running') return;
@@ -132,7 +167,7 @@ const Results = () => {
     let frameCount = 0;
     let lastTime = performance.now();
     
-    const detectionInterval = setInterval(() => {
+    const detectionInterval = setInterval(async () => {
       const now = performance.now();
       const deltaTime = now - lastTime;
       
@@ -142,7 +177,24 @@ const Results = () => {
         lastTime = now;
       }
       
-      detectFaces();
+      const newDetections = await sendFrameToBackend();
+      if (newDetections.length > 0) {
+        setDetections(prev => [
+          ...prev,
+          ...newDetections.map(d => ({
+            ...d,
+            timestamp: Date.now(),
+            id: `${d.id}-${Date.now()}`,
+          }))
+        ].slice(-20));
+        
+        const currentTime = new Date().toLocaleTimeString();
+        setLastDetectionTime(currentTime);
+        if (!isDetecting) {
+          setFrozenDetectionTime(currentTime);
+        }
+      }
+      
       frameCount++;
     }, 1000 / 30);
 
@@ -152,99 +204,45 @@ const Results = () => {
   // Arrêter la détection
   const stopDetection = () => {
     setIsDetecting(false);
-  };
-
-  // Détection des visages
-  const detectFaces = useCallback(() => {
-    if (!videoRef.current || cameraState !== 'running') return;
-    
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    const ctx = canvas.getContext('2d');
-    
-    updateCanvasSize();
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    const newDetections = generateMockDetections(canvas.width, canvas.height);
-    drawDetections(ctx, newDetections);
-    
-    setDetections(prev => [...prev, ...newDetections].slice(-20));
-    setLastDetectionTime(new Date().toLocaleTimeString());
-  }, [cameraState, updateCanvasSize]);
-
-  // Générer des détections factices
-  const generateMockDetections = (width, height) => {
-    if (Math.random() < 0.3) return [];
-    
-    const names = ["Yassin", "Emna", "Alex", "Sarah", "Mohamed", "Léa"];
-    const count = Math.min(4, Math.floor(Math.random() * 3) + 1);
-    
-    return Array.from({ length: count }, (_, i) => {
-      const size = Math.min(width, height) * (0.15 + Math.random() * 0.15);
-      return {
-        id: Date.now() + i,
-        x: Math.random() * (width - size),
-        y: Math.random() * (height - size),
-        width: size,
-        height: size,
-        confidence: 0.85 + Math.random() * 0.1,
-        name: names[Math.floor(Math.random() * names.length)],
-        timestamp: new Date().toISOString()
-      };
-    });
+    setFps(0);
+    setFrozenDetectionTime(lastDetectionTime);
   };
 
   // Dessiner les détections
-  const drawDetections = (ctx, detections) => {
-    ctx.lineWidth = 3;
-    ctx.font = 'bold 14px Arial';
+  const drawDetections = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
     
-    detections.forEach(det => {
-      ctx.strokeStyle = `hsl(${Math.round(det.confidence * 120)}, 80%, 50%)`;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    detections.slice(-5).forEach(det => {
+      ctx.strokeStyle = '#FF3B30';
+      ctx.lineWidth = 2;
       ctx.strokeRect(det.x, det.y, det.width, det.height);
       
-      const text = `${det.name} ${Math.round(det.confidence * 100)}%`;
-      const textWidth = ctx.measureText(text).width;
+      ctx.fillStyle = 'rgba(255, 59, 48, 0.7)';
+      ctx.fillRect(det.x, det.y - 20, 120, 20);
       
-      ctx.fillStyle = 'rgba(3, 8, 16, 0.7)';
-      ctx.fillRect(det.x - 1, det.y - 22, textWidth + 10, 20);
-      
-      ctx.fillStyle = '#f3fbfd';
-      ctx.fillText(text, det.x + 4, det.y - 6);
+      ctx.fillStyle = 'white';
+      ctx.font = '12px Arial';
+      ctx.fillText(
+        `${det.name || 'Inconnu'} (${Math.round(det.confidence * 100)}%)`,
+        det.x + 5,
+        det.y - 5
+      );
     });
-  };
-
-  // Sauvegarder les détections
-  const saveDetections = () => {
-    const data = {
-      timestamp: new Date().toISOString(),
-      detections: detections,
-      videoResolution: {
-        width: videoRef.current?.videoWidth || 0,
-        height: videoRef.current?.videoHeight || 0
-      }
-    };
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
-    a.click();
-    
-    URL.revokeObjectURL(url);
-  };
+  }, [detections]);
 
   // Appliquer une taille prédéfinie
   const applyPresetSize = (size) => {
     setPresetSize(size);
-    const containerWidth = containerRef.current?.parentElement?.clientWidth || 800;
+    if (cameraState === 'running') setUserSelectedSize(size);
     
+    const containerWidth = containerRef.current?.parentElement?.clientWidth || 800;
     const sizes = {
-      small: 0.5,
-      medium: 0.75,
-      large: 0.9,
+      small: 0.4,
+      medium: 0.65,
+      large: 0.85,
       full: 1
     };
     
@@ -255,7 +253,7 @@ const Results = () => {
     });
   };
 
-  // Gestion du redimensionnement
+  // Redimensionnement
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isResizing || !containerRef.current) return;
@@ -292,12 +290,15 @@ const Results = () => {
       const cleanup = startDetection();
       return cleanup;
     }
-  }, [isDetecting, cameraState, detectFaces]);
+  }, [isDetecting, cameraState]);
+
+  // Dessiner les détections
+  useEffect(() => {
+    if (detections.length > 0) drawDetections();
+  }, [detections, drawDetections]);
 
   // Nettoyage
-  useEffect(() => {
-    return () => stopCamera();
-  }, []);
+  useEffect(() => stopCamera, []);
 
   return (
     <div className="results-page">
@@ -371,10 +372,10 @@ const Results = () => {
                 {fps} FPS
               </span>
             )}
-            {lastDetectionTime && (
+            {(frozenDetectionTime || lastDetectionTime) && cameraState === 'running' && (
               <span className="last-detection">
                 <RefreshIcon size={14} className="icon" />
-                Dernière détection: {lastDetectionTime}
+                Dernière détection: {frozenDetectionTime || lastDetectionTime}
               </span>
             )}
           </div>
@@ -422,7 +423,7 @@ const Results = () => {
                 </button>
                 
                 <button 
-                  onClick={detectFaces} 
+                  onClick={sendFrameToBackend} 
                   className="control-btn detect-btn"
                   disabled={cameraState !== 'running'}
                 >
@@ -434,7 +435,23 @@ const Results = () => {
               <div className="control-group">
                 {detections.length > 0 && (
                   <button 
-                    onClick={saveDetections} 
+                    onClick={() => {
+                      const data = {
+                        timestamp: new Date().toISOString(),
+                        detections: detections,
+                        videoResolution: {
+                          width: videoRef.current?.videoWidth || 0,
+                          height: videoRef.current?.videoHeight || 0
+                        }
+                      };
+                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }} 
                     className="control-btn save-btn"
                   >
                     <DownloadIcon size={18} className="icon" />
@@ -484,7 +501,23 @@ const Results = () => {
                   Effacer tout
                 </button>
                 <button 
-                  onClick={saveDetections} 
+                  onClick={() => {
+                    const data = {
+                      timestamp: new Date().toISOString(),
+                      detections: detections,
+                      videoResolution: {
+                        width: videoRef.current?.videoWidth || 0,
+                        height: videoRef.current?.videoHeight || 0
+                      }
+                    };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }} 
                   className="action-btn save-btn"
                 >
                   <DownloadIcon size={16} className="icon" />
