@@ -77,3 +77,78 @@ button{
     }
 
 }
+
+/***********FEEDBACK*************/
+.feedback-container {
+    background-color: #0a0f1f; /* Fond foncé pour s'aligner avec le footer */
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    max-width: 400px;
+    margin: auto;
+    box-shadow: 0 4px 10px rgba(74, 199, 239, 0.2);
+}
+
+/* Style des labels */
+.feedback-container label {
+    font-size: 1rem;
+    color: #e0e6ed;
+    margin-right: 15px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Custom radio buttons */
+input[type="radio"] {
+    display: none; /* Masquer le bouton natif */
+}
+
+input[type="radio"] + label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+/* Effet de sélection */
+input[type="radio"]:checked + label {
+    background-color: rgba(74, 199, 239, 0.2);
+    border-color: #4ac7ef;
+    box-shadow: 0 0 8px rgba(74, 199, 239, 0.5);
+}
+
+/* Animation au survol */
+input[type="radio"] + label:hover {
+    transform: scale(1.05);
+    transition: all 0.2s ease-in-out;
+}
+
+/* Icônes emoji avec effet */
+label[for="oui"], label[for="non"] {
+    font-size: 1.2rem;
+}
+
+/* Bouton d'envoi stylisé */
+button {
+    display: inline-block;
+    background-color: #4ac7ef;
+    color: #030810; /* Texte sur bouton */
+    padding: 0.8rem 1.5rem;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    margin-top: 15px;
+    font-size: 1rem;
+}
+
+button:hover {
+    background-color: #3ab0d6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
