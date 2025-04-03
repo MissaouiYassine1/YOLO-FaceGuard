@@ -22,8 +22,8 @@ const Contact = () => {
                 <img src={emna} alt="Membre 2" />
                 <div className="member-info">
                     <h3>Emna Kaanich</h3>
-                    <p>Experte en gestion de projet.</p>
-                    <a href="mailto:emna.kaanich@enis.tn">emna.kaanich@enis.tn</a>
+                    <p>Gestionnaire de projet.</p>
+                    <a href="mailto:emna.kaaniche@enis.tn">emna.kaanich@enis.tn</a>
                 </div>
             </div>
             <div className="member-card">

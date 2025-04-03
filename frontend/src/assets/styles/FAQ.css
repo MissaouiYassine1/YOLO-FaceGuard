@@ -1,0 +1,79 @@
+
+.video-container video {
+    width: 97%;
+    border-radius: 10px;
+    box-shadow: 0px 0px 15px rgba(0, 191, 255, 0.8);
+}
+.question-container {
+    display: flex;
+    flex-wrap: wrap; /* Permet le passage à la ligne */
+    justify-content: space-between; /* Espacement équilibré */
+    gap: 20px; /* Espacement entre les blocs */
+    max-width: 1200px;
+    margin: auto;
+    margin-bottom: 25px;
+}
+
+.question {
+    width: calc(50% - 10px);
+    box-sizing: border-box;
+    background-color: #0a0f1f; /* Fond sombre */
+    color: #f3fbfd;
+    padding: 20px;
+    border-radius: 10px; /* Bordures arrondies */
+    box-shadow: 0px 0px 15px rgba(0, 191, 255, 0.8); /* Effet glow */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: auto;
+    text-align: left;
+}
+
+.question h4 {
+    color: #f3fbfd;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.question ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.question li {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    margin-top: 5px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+}
+
+.question li::before {
+    content: "✔"; /* Ajoute une icône */
+    color: #00ffaa;
+    margin-right: 10px;
+}
+label{
+    margin-right: 10px;
+}
+input{
+    margin-right: 5px;
+}
+button{
+    display: inline-block;
+    background-color: #4ac7ef;
+    color: #030810; /* Texte sur bouton */
+    padding: 0.8rem 1.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+    &:hover {
+        background-color: #3ab0d6;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+}

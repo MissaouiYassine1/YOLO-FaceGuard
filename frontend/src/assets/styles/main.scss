@@ -35,35 +35,18 @@ body {
   border-bottom: 2px solid #4ac7ef; /* Accent bleu */
 }
 
+
+
 /* Home Page */
 .home-page {
   text-align: center;
-  
+
   p {
     margin-bottom: 2rem;
     font-size: 1.1rem;
-    color: #987551; /* Texte secondaire */
   }
 }
 
-.cta-button {
-  display: inline-block;
-  background-color: #4ac7ef; /* Bouton principal */
-  color: #030810; /* Texte sur bouton */
-  padding: 0.8rem 1.5rem;
-  border-radius: 4px;
-  text-decoration: none;
-  font-weight: bold;
-  transition: all 0.3s;
-  border: none;
-  cursor: pointer;
-
-  &:hover {
-    background-color: #3ab0d6;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  }
-}
 
 /* Contact Page */
 .contact-form {
@@ -112,6 +95,7 @@ body {
 .member-card {
   background: #0a101a;
   border: 1px solid #5d6773;
+  box-shadow: 0px 0px 15px rgba(0, 191, 255, 0.8);
   padding: 1.5rem;
   border-radius: 8px;
   transition: all 0.3s;
