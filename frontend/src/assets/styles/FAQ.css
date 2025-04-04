@@ -1,9 +1,30 @@
+/* Conteneur principal */
+.FAQ-page {
+    padding: 20px;
+    text-align: center;
+}
+
+/* Vidéo */
+.video-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.video-container:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 20px rgba(0, 191, 255, 0.5);
+}
 
 .video-container video {
-    width: 97%;
+    width: 80%;
+    max-width: 800px;
     border-radius: 10px;
     box-shadow: 0px 0px 15px rgba(0, 191, 255, 0.8);
 }
+
+/* Conteneur des questions */
 .question-container {
     display: flex;
     flex-wrap: wrap; /* Permet le passage à la ligne */
@@ -14,8 +35,9 @@
     margin-bottom: 25px;
 }
 
+/* Style des questions */
 .question {
-    width: calc(50% - 10px);
+    width: calc(50% - 10px); /* Deux colonnes sur desktop */
     box-sizing: border-box;
     background-color: #0a0f1f; /* Fond sombre */
     color: #f3fbfd;
@@ -23,8 +45,13 @@
     border-radius: 10px; /* Bordures arrondies */
     box-shadow: 0px 0px 15px rgba(0, 191, 255, 0.8); /* Effet glow */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: auto;
     text-align: left;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.question:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 191, 255, 0.5);
 }
 
 .question h4 {
@@ -52,103 +79,123 @@
     color: #00ffaa;
     margin-right: 10px;
 }
-label{
-    margin-right: 10px;
-}
-input{
-    margin-right: 5px;
-}
-button{
-    display: inline-block;
-    background-color: #4ac7ef;
-    color: #030810; /* Texte sur bouton */
-    padding: 0.8rem 1.5rem;
-    border-radius: 4px;
-    text-decoration: none;
-    font-weight: bold;
-    transition: all 0.3s;
-    border: none;
-    cursor: pointer;
-    margin-top: 10px;
-    &:hover {
-        background-color: #3ab0d6;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
+/* 📱 Responsivité */
+@media screen and (max-width: 1024px) {
+    .question-container {
+        flex-direction: column; /* Passage en colonne */
+        align-items: center;
     }
 
+    .question {
+        width: 90%; /* Largeur augmentée pour mieux s'afficher */
+    }
+
+    .video-container video {
+        width: 90%;
+    }
 }
 
-/***********FEEDBACK*************/
+@media screen and (max-width: 768px) {
+    .question {
+        width: 100%; /* Pleine largeur pour mobile */
+    }
+
+    .video-container video {
+        width: 100%;
+    }
+}
+/*********** FEEDBACK *************/
 .feedback-container {
-    background-color: #0a0f1f; /* Fond foncé pour s'aligner avec le footer */
+    background-color: #0a0f1f;
     padding: 20px;
-    border-radius: 8px;
+    border-radius: 10px;
     text-align: center;
-    max-width: 400px;
+    max-width: 450px;
     margin: auto;
-    box-shadow: 0 4px 10px rgba(74, 199, 239, 0.2);
+    box-shadow: 0 4px 10px rgba(74, 199, 239, 0.3);
 }
 
-/* Style des labels */
-.feedback-container label {
-    font-size: 1rem;
+/* Titre */
+.feedback-title {
+    font-size: 1.2rem;
     color: #e0e6ed;
-    margin-right: 15px;
-    font-weight: 500;
-    cursor: pointer;
+    font-weight: bold;
+    margin-bottom: 15px;
+    display: block;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Custom radio buttons */
+/* Conteneur des options */
+.feedback-options {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Masquer les radios natifs */
 input[type="radio"] {
-    display: none; /* Masquer le bouton natif */
+    display: none;
 }
 
-input[type="radio"] + label {
-    display: inline-flex;
+/* Style des boutons de feedback */
+.feedback-button {
+    display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 12px;
-    border-radius: 20px;
-    border: 2px solid transparent;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #e0e6ed;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
     transition: all 0.3s ease;
+    border: 2px solid transparent;
+    user-select: none;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Effet de sélection */
-input[type="radio"]:checked + label {
+/* Effet hover */
+.feedback-button:hover {
     background-color: rgba(74, 199, 239, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Effet sélectionné */
+input[type="radio"]:checked + .feedback-button {
+    background-color: #4ac7ef;
+    color: #030810;
     border-color: #4ac7ef;
-    box-shadow: 0 0 8px rgba(74, 199, 239, 0.5);
-}
-
-/* Animation au survol */
-input[type="radio"] + label:hover {
-    transform: scale(1.05);
-    transition: all 0.2s ease-in-out;
-}
-
-/* Icônes emoji avec effet */
-label[for="oui"], label[for="non"] {
-    font-size: 1.2rem;
+    box-shadow: 0 0 10px rgba(74, 199, 239, 0.5);
 }
 
 /* Bouton d'envoi stylisé */
-button {
+.submit-button {
     display: inline-block;
     background-color: #4ac7ef;
-    color: #030810; /* Texte sur bouton */
-    padding: 0.8rem 1.5rem;
+    color: #030810;
+    padding: 10px 20px;
     border-radius: 5px;
-    text-decoration: none;
+    font-size: 1rem;
     font-weight: bold;
     transition: all 0.3s ease;
     border: none;
     cursor: pointer;
-    margin-top: 15px;
-    font-size: 1rem;
+    margin-top: 10px;
 }
 
-button:hover {
+.submit-button:hover {
     background-color: #3ab0d6;
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* 📱 Responsive */
+@media screen and (max-width: 768px) {
+    .feedback-options {
+        flex-direction: column;
+    }
 }

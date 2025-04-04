@@ -1,6 +1,6 @@
 import '../assets/styles/main.scss';
 import '../assets/styles/home.css';
-
+import personneImg from '../assets/images/personne.png';
 const Home = () => {
     document.title = "YOLO FaceGuard";
     return (
@@ -20,7 +20,11 @@ const Home = () => {
 
             </div>
             <div className="image-container">
-                <img src="./src/assets/images/personne.png" alt="personne"/>
+                <img
+                    src={personneImg}
+                    alt="Illustration du système de reconnaissance faciale"
+                    loading="lazy" // Chargement lazy pour la performance
+                />
             </div>
         </div>
 

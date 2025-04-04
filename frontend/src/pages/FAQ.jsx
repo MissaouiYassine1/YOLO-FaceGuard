@@ -4,6 +4,7 @@ const FAQ = () => {
     document.title = "YOLO FaceGuard-FAQ";
     return (
         <div className="page FAQ-page">
+            <h2>Fonctionnement du système</h2>
             <div className={"video-container"}>
                 <video controls>
                     <source src="./src/assets/videos/videoExp.mp4" type="video/mp4"/>
@@ -56,19 +57,27 @@ const FAQ = () => {
 
             </div>
             <h2>Feedback utilisateurs</h2>
-            <div className={"feedback-container"}>
-                <label>Ces réponses vous ont aidé ?</label><br/>
-                <input type="radio" value={"Oui"} name="reponse"/>
-                <label>👍 Oui</label>
-                <input type="radio" value={"Non"} name="reponse"/>
-                <label>👎 Non</label>
-                <br/>
-                <button type="submit" onClick={() => window.location.reload()}>
-                    Envoyé
+            <div className="feedback-container">
+                <label className="feedback-title">Ces réponses vous ont aidé ?</label>
+
+                <div className="feedback-options">
+                    <input type="radio" id="feedback-oui" name="feedback" value="Oui"/>
+                    <label htmlFor="feedback-oui" className="feedback-button">
+                        <span className="icon">✅</span> Oui
+                    </label>
+
+                    <input type="radio" id="feedback-non" name="feedback" value="Non"/>
+                    <label htmlFor="feedback-non" className="feedback-button">
+                        <span className="icon">❌</span> Non
+                    </label>
+                </div>
+
+                <button type="submit" className="submit-button" onClick={() => window.location.reload()}>
+                    Envoyer
                 </button>
-
-
             </div>
+
+
         </div>
     );
 };
