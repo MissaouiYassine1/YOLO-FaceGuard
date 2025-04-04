@@ -18,7 +18,7 @@ const Header = () => {
             <a href="/FAQ"><span>FAQ</span></a>
             <a href="/results"><span>Résultats</span></a>
             <a href="/contact"><span>Contact</span></a>
-
+            <a href="/register"><span>Régistrer</span></a>
         </nav>
     </header>
   );

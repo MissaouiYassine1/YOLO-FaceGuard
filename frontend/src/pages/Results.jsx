@@ -339,7 +339,7 @@ const Results = () => {
       <div className="realtime-section">
         <div 
           ref={containerRef}
-          className="video-container"
+          className="video-contain"
           style={{
             width: dimensions.width,
             height: dimensions.height,
