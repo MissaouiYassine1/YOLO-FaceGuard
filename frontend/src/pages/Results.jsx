@@ -17,8 +17,18 @@ import {
   IoOptions as OptionsIcon,
   IoCloseCircle as ClearIcon,
   IoImage as ImageIcon,
-  IoInformationCircle as InfoIcon
+  IoInformationCircle as InfoIcon,
+  IoWarning as WarningIcon
 } from 'react-icons/io5';
+
+// Configuration API
+const API_CONFIG = {
+  BASE_URL: 'http://localhost:8000',
+  ENDPOINTS: {
+    DETECT: '/api/v1/detect',
+    RECOGNIZE: '/api/v1/recognize'
+  }
+};
 
 document.title = "YOLO FaceGuard - Résultats";
 
@@ -46,6 +56,8 @@ const Results = () => {
   const [showDetectionInfo, setShowDetectionInfo] = useState(false);
   const [userSelectedSize, setUserSelectedSize] = useState(null);
   const [frozenDetectionTime, setFrozenDetectionTime] = useState(null);
+  const [apiError, setApiError] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Démarrer la caméra
   const startCamera = async () => {
@@ -80,7 +92,8 @@ const Results = () => {
       }
     } catch (err) {
       console.error("Erreur d'accès à la caméra:", err);
-      alert(`Erreur d'accès à la caméra: ${err.message}`);
+      setApiError(`Erreur d'accès à la caméra: ${err.message}`);
+      setTimeout(() => setApiError(null), 5000);
     }
   };
 
@@ -130,6 +143,7 @@ const Results = () => {
 
   // Envoyer une image au backend
   const sendFrameToBackend = async () => {
+    setIsProcessing(true);
     try {
       const canvas = canvasRef.current;
       const video = videoRef.current;
@@ -144,18 +158,71 @@ const Results = () => {
       const formData = new FormData();
       formData.append('file', blob, 'frame.jpg');
 
-      const response = await fetch('http://localhost:8000/api/detect', {
-        method: 'POST',
-        body: formData,
-      });
+      // Étape 1: Détection des visages
+      const detectionResponse = await fetch(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.DETECT}`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
-      if (!response.ok) throw new Error('Erreur de détection');
-
-      const data = await response.json();
-      return data.faces || [];
+      if (!detectionResponse.ok) throw new Error('Erreur de détection');
+      
+      const detections = await detectionResponse.json();
+      
+      // Étape 2: Reconnaissance pour chaque visage détecté
+      const recognitionResults = await Promise.all(
+        detections.faces.map(async (box) => {
+          // Extraire le visage du canvas
+          const faceCanvas = document.createElement('canvas');
+          faceCanvas.width = box[2] - box[0];
+          faceCanvas.height = box[3] - box[1];
+          const faceCtx = faceCanvas.getContext('2d');
+          faceCtx.drawImage(
+            canvas, 
+            box[0], box[1], faceCanvas.width, faceCanvas.height,
+            0, 0, faceCanvas.width, faceCanvas.height
+          );
+          
+          // Envoyer pour reconnaissance
+          const faceBlob = await new Promise(resolve => 
+            faceCanvas.toBlob(resolve, 'image/jpeg'));
+          
+          const faceFormData = new FormData();
+          faceFormData.append('file', faceBlob, 'face.jpg');
+          
+          const recognitionResponse = await fetch(
+            `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.RECOGNIZE}`,
+            {
+              method: 'POST',
+              body: faceFormData,
+            }
+          );
+          
+          return recognitionResponse.json();
+        })
+      );
+      
+      // Formater les résultats pour le state
+      return detections.faces.map((box, i) => ({
+        id: `face-${Date.now()}-${i}`,
+        x: box[0],
+        y: box[1],
+        width: box[2] - box[0],
+        height: box[3] - box[1],
+        name: recognitionResults[i]?.face_id ? `Personne ${recognitionResults[i].face_id}` : 'Inconnu',
+        confidence: recognitionResults[i]?.confidence || 0,
+        timestamp: Date.now()
+      }));
+      
     } catch (error) {
-      console.error('Erreur lors de l\'envoi au backend:', error);
+      console.error('Erreur API:', error);
+      setApiError(`Erreur API: ${error.message}`);
+      setTimeout(() => setApiError(null), 5000);
       return [];
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -226,7 +293,7 @@ const Results = () => {
       ctx.fillStyle = 'white';
       ctx.font = '12px Arial';
       ctx.fillText(
-        `${det.name || 'Inconnu'} (${Math.round(det.confidence * 100)}%)`,
+        `${det.name} (${Math.round(det.confidence * 100)}%)`,
         det.x + 5,
         det.y - 5
       );
@@ -302,6 +369,22 @@ const Results = () => {
 
   return (
     <div className="results-page">
+      {/* Message d'erreur */}
+      {apiError && (
+        <div className="error-banner">
+          <WarningIcon size={18} />
+          {apiError}
+        </div>
+      )}
+
+      {/* Indicateur de chargement */}
+      {isProcessing && (
+        <div className="processing-overlay">
+          <div className="processing-spinner"></div>
+          <p>Analyse en cours...</p>
+        </div>
+      )}
+
       <header className="page-header">
         <h2>
           <CameraIcon size={24} className="header-icon" />
@@ -339,7 +422,7 @@ const Results = () => {
       <div className="realtime-section">
         <div 
           ref={containerRef}
-          className="video-container"
+          className="video-contain"
           style={{
             width: dimensions.width,
             height: dimensions.height,
@@ -412,7 +495,7 @@ const Results = () => {
                 <button 
                   onClick={isDetecting ? stopDetection : startDetection} 
                   className={`control-btn ${isDetecting ? 'active-btn' : 'detect-btn'}`}
-                  disabled={cameraState !== 'running'}
+                  disabled={cameraState !== 'running' || isProcessing}
                 >
                   {isDetecting ? (
                     <StopCircleIcon size={18} className="icon" />
@@ -425,7 +508,7 @@ const Results = () => {
                 <button 
                   onClick={sendFrameToBackend} 
                   className="control-btn detect-btn"
-                  disabled={cameraState !== 'running'}
+                  disabled={cameraState !== 'running' || isProcessing}
                 >
                   <SearchIcon size={18} className="icon" />
                   Détection manuelle

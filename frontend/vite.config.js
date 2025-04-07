@@ -56,7 +56,8 @@ export default defineConfig({
       'react',
       'react-dom',
       '@ionic/react',
-      'ionicons'
+      'ionicons',
+      'react-toastify'
     ],
   },
 });
