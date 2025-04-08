@@ -1,4 +1,4 @@
-{
+
 {
   "name": "yolo-faceguard-frontend",
   "version": "0.1.0",
@@ -2852,8 +2852,7 @@
         "node": ">=12"
       }
     }
-  }
-}  "name": "yolo-faceguard-frontend",
+  },"name": "yolo-faceguard-frontend",
   "private": true,
   "version": "0.1.0",
   "scripts": {
