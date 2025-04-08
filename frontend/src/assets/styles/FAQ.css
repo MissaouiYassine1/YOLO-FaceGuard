@@ -6,22 +6,26 @@
 
 /* Vidéo */
 .video-container {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    width: 80%; /* ou un max-width selon ton design, ex : 600px */
+    margin: 20px auto;
+    padding: 10px;
+    background-color: #0a0f1f;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 191, 255, 0.3); /* shadow douce */
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    overflow: hidden; /* pour éviter que la video dépasse */
 }
 
 .video-container:hover {
-    transform: scale(1.02);
-    box-shadow: 0 8px 20px rgba(0, 191, 255, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 191, 255, 0.4); /* effet léger */
+    transform: translateY(-4px);
 }
 
+/* La vidéo garde sa taille naturelle */
 .video-container video {
-    width: 80%;
-    max-width: 800px;
-    border-radius: 10px;
-    box-shadow: 0px 0px 15px rgba(0, 191, 255, 0.8);
+    width: 100%;
+    display: block;
+    border-radius: 10px; /* pour un joli rendu dans le container */
 }
 
 /* Conteneur des questions */
@@ -43,7 +47,7 @@
     color: #f3fbfd;
     padding: 20px;
     border-radius: 10px; /* Bordures arrondies */
-    box-shadow: 0px 0px 15px rgba(0, 191, 255, 0.8); /* Effet glow */
+    box-shadow: 0px 0px 10px rgba(0, 191, 255, 0.8); /* Effet glow */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     text-align: left;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -51,7 +55,7 @@
 
 .question:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0, 191, 255, 0.5);
+    box-shadow: 0 6px 10px rgba(0, 191, 255, 0.5);
 }
 
 .question h4 {
