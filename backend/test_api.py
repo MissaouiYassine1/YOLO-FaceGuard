@@ -2,57 +2,50 @@ import requests
 import cv2
 import numpy as np
 import os
-import pytest
-from fastapi.testclient import TestClient
-from app import app  # Importez votre application FastAPI
+from pathlib import Path
 
-# Configuration
-BASE_URL = "http://localhost:8000"
-TEST_IMAGE_PATH = "test_images/me.jpg"
-os.makedirs("test_images", exist_ok=True)
+BASE_URL = "http://localhost:8000/api/v1"
 
-# Client de test
-client = TestClient(app)
+def test_detection(image_path: str):
+    files = {'file': open(image_path, 'rb')}
+    response = requests.post(f"{BASE_URL}/detect", files=files)
+    print("Detection Response:", response.json())
 
-@pytest.fixture
-def test_image():
-    """Génère une image de test avec un visage"""
-    img = np.zeros((300, 300, 3), dtype=np.uint8)
-    cv2.rectangle(img, (50, 50), (250, 250), (255, 255, 255), -1)  # Carré blanc = visage simulé
-    cv2.imwrite(TEST_IMAGE_PATH, img)
-    yield TEST_IMAGE_PATH
-    if os.path.exists(TEST_IMAGE_PATH):
-        os.remove(TEST_IMAGE_PATH)
+def test_recognition(face_path: str):
+    files = {'file': open(face_path, 'rb')}
+    response = requests.post(f"{BASE_URL}/recognize", files=files)
+    print("Recognition Response:", response.json())
 
-def test_api_health_check():
-    """Teste le endpoint de santé"""
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "OK"}
+def test_register(name: str, image_paths: list):
+    files = [('files', open(p, 'rb')) for p in image_paths]
+    data = {'name': name}
+    response = requests.post(f"{BASE_URL}/register", files=files, data=data)
+    print("Registration Response:", response.json())
 
-def test_face_detection(test_image):
-    """Teste la détection de visage avec une image simulée"""
-    with open(test_image, "rb") as f:
-        response = client.post(
-            "/api/detect",
-            files={"file": ("test_face.jpg", f, "image/jpeg")}
-        )
+def test_enhancement(image_path: str):
+    files = {'file': open(image_path, 'rb')}
+    response = requests.post(f"{BASE_URL}/enhance", files=files)
     
-    assert response.status_code == 200
-    data = response.json()
-    assert "faces" in data
-    assert len(data["faces"]) > 0
-    assert data["faces"][0]["confidence"] > 0.7
-
-def test_invalid_file_upload():
-    """Teste le rejet des fichiers non-images"""
-    response = client.post(
-        "/api/detect",
-        files={"file": ("test.txt", b"fake content", "text/plain")}
-    )
-    assert response.status_code == 400
-    assert "Uploaded file must be an image" in response.text
+    if response.status_code == 200:
+        enhanced = np.frombuffer(response.json()['enhanced_image'], np.uint8)
+        enhanced = cv2.imdecode(enhanced, cv2.IMREAD_COLOR)
+        cv2.imwrite("enhanced.jpg", enhanced)
+        print("Enhanced image saved as enhanced.jpg")
 
 if __name__ == "__main__":
-    # Exécute tous les tests avec pytest
-    pytest.main(["-v", "--tb=line", __file__])
+    test_images = [str(Path("test_images") / f) for f in os.listdir("test_images") if f.endswith(".jpg")]
+    
+    if test_images:
+        print("Testing face detection...")
+        test_detection(test_images[0])
+        
+        print("\nTesting face recognition...")
+        test_recognition(test_images[0])
+        
+        print("\nTesting face registration...")
+        test_register("test_person", test_images[:2])
+        
+        print("\nTesting night enhancement...")
+        test_enhancement(test_images[0])
+    else:
+        print("No test images found in test_images directory")

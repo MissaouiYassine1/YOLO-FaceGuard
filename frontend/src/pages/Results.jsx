@@ -18,16 +18,18 @@ import {
   IoCloseCircle as ClearIcon,
   IoImage as ImageIcon,
   IoInformationCircle as InfoIcon,
-  IoWarning as WarningIcon
+  IoWarning as WarningIcon,
+  IoCameraReverse as SwitchCameraIcon
 } from 'react-icons/io5';
 
 // Configuration API
 const API_CONFIG = {
   BASE_URL: 'http://localhost:8000',
   ENDPOINTS: {
-    DETECT: '/api/v1/detect',
-    RECOGNIZE: '/api/v1/recognize'
-  }
+    DETECT: '/api/detect',
+    RECOGNIZE: '/api/recognize'
+  },
+  TIMEOUT: 10000 // 10 seconds
 };
 
 document.title = "YOLO FaceGuard - Résultats";
@@ -39,101 +41,146 @@ const Results = () => {
   const containerRef = useRef(null);
   const resizeHandleRef = useRef(null);
   
-  // États
-  const [detections, setDetections] = useState([]);
-  const [cameraState, setCameraState] = useState('stopped');
-  const [stream, setStream] = useState(null);
-  const [isDetecting, setIsDetecting] = useState(false);
-  const [fps, setFps] = useState(0);
-  const [lastDetectionTime, setLastDetectionTime] = useState(null);
-  const [dimensions, setDimensions] = useState({
-    width: '400px',
-    height: 'auto',
-    aspectRatio: 16/9
+  // État unifié
+  const [state, setState] = useState({
+    // Camera
+    cameraState: 'stopped', // 'stopped' | 'running' | 'paused'
+    stream: null,
+    activeCamera: 'user', // 'user' | 'environment'
+    
+    // Detection
+    detections: [],
+    isDetecting: false,
+    fps: 0,
+    lastDetectionTime: null,
+    frozenDetectionTime: null,
+    
+    // UI
+    dimensions: {
+      width: '400px',
+      height: 'auto',
+      aspectRatio: 16/9
+    },
+    isResizing: false,
+    presetSize: 'small',
+    showDetectionInfo: false,
+    userSelectedSize: null,
+    
+    // System
+    apiError: null,
+    isProcessing: false
   });
-  const [isResizing, setIsResizing] = useState(false);
-  const [presetSize, setPresetSize] = useState('small');
-  const [showDetectionInfo, setShowDetectionInfo] = useState(false);
-  const [userSelectedSize, setUserSelectedSize] = useState(null);
-  const [frozenDetectionTime, setFrozenDetectionTime] = useState(null);
-  const [apiError, setApiError] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Démarrer la caméra
-  const startCamera = async () => {
+  // Destructuration de l'état
+  const {
+    cameraState,
+    stream,
+    activeCamera,
+    detections,
+    isDetecting,
+    fps,
+    lastDetectionTime,
+    frozenDetectionTime,
+    dimensions,
+    isResizing,
+    presetSize,
+    showDetectionInfo,
+    userSelectedSize,
+    apiError,
+    isProcessing
+  } = state;
+
+  // Mise à jour optimisée de l'état
+  const updateState = (newState) => {
+    setState(prev => ({ ...prev, ...newState }));
+  };
+
+  // Démarrer/arrêter la caméra
+  const handleCamera = async (action) => {
     try {
-      if (cameraState === 'stopped') {
+      if (action === 'start' || action === 'switch') {
+        if (!navigator.mediaDevices) {
+          throw new Error("Accès à la caméra non supporté");
+        }
+
+        // Arrêter le flux existant si on switch
+        if (action === 'switch' && stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+
         const constraints = {
           video: { 
             width: { ideal: 1280 },
             height: { ideal: 720 },
-            facingMode: 'user',
+            facingMode: activeCamera,
             frameRate: { ideal: 30 }
           }
         };
-        
+
         const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
         videoRef.current.srcObject = mediaStream;
-        setStream(mediaStream);
-        setCameraState('running');
         
-        videoRef.current.onloadedmetadata = () => {
-          const video = videoRef.current;
-          const aspectRatio = video.videoWidth / video.videoHeight;
-          setDimensions(prev => ({
-            ...prev,
-            aspectRatio
-          }));
-          updateCanvasSize();
-          applyPresetSize(userSelectedSize || 'small');
-        };
-      } else if (cameraState === 'paused') {
-        resumeCamera();
+        await new Promise((resolve) => {
+          videoRef.current.onloadedmetadata = resolve;
+        });
+
+        updateState({
+          stream: mediaStream,
+          cameraState: 'running',
+          dimensions: {
+            ...dimensions,
+            aspectRatio: videoRef.current.videoWidth / videoRef.current.videoHeight
+          }
+        });
+
+        updateCanvasSize();
+        applyPresetSize(userSelectedSize || 'small');
+      } 
+      else if (action === 'stop') {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+        }
+        updateState({
+          stream: null,
+          cameraState: 'stopped',
+          detections: [],
+          isDetecting: false,
+          fps: 0
+        });
+      }
+      else if (action === 'pause' && stream) {
+        stream.getTracks().forEach(track => track.enabled = false);
+        updateState({
+          cameraState: 'paused',
+          isDetecting: false
+        });
+      }
+      else if (action === 'resume' && stream) {
+        stream.getTracks().forEach(track => track.enabled = true);
+        updateState({ cameraState: 'running' });
       }
     } catch (err) {
-      console.error("Erreur d'accès à la caméra:", err);
-      setApiError(`Erreur d'accès à la caméra: ${err.message}`);
-      setTimeout(() => setApiError(null), 5000);
+      console.error(`Erreur caméra: ${err.message}`);
+      updateState({
+        apiError: `Erreur: ${err.message}`,
+        cameraState: 'stopped'
+      });
+      setTimeout(() => updateState({ apiError: null }), 5000);
     }
   };
 
-  // Reprendre la caméra
-  const resumeCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.enabled = true);
-      setCameraState('running');
-    }
+  // Switch entre caméra avant/arrière
+  const switchCamera = () => {
+    updateState(prev => ({
+      activeCamera: prev.activeCamera === 'user' ? 'environment' : 'user'
+    }));
+    handleCamera('switch');
   };
 
-  // Mettre en pause la caméra
-  const pauseCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.enabled = false);
-      setCameraState('paused');
-      stopDetection();
-    }
-  };
-
-  // Arrêter la caméra
-  const stopCamera = () => {
-    stopDetection();
-    
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    
-    setCameraState('stopped');
-    setDetections([]);
-    
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    
-    applyPresetSize('small');
-  };
-
-  // Mettre à jour la taille du canvas
+  // Redimensionnement canvas
   const updateCanvasSize = useCallback(() => {
     if (canvasRef.current && videoRef.current) {
       canvasRef.current.width = videoRef.current.videoWidth;
@@ -141,170 +188,8 @@ const Results = () => {
     }
   }, []);
 
-  // Envoyer une image au backend
-  const sendFrameToBackend = async () => {
-    setIsProcessing(true);
-    try {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      const ctx = canvas.getContext('2d');
-      
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      const blob = await new Promise((resolve) => {
-        canvas.toBlob(resolve, 'image/jpeg', 0.9);
-      });
-
-      const formData = new FormData();
-      formData.append('file', blob, 'frame.jpg');
-
-      // Étape 1: Détection des visages
-      const detectionResponse = await fetch(
-        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.DETECT}`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      if (!detectionResponse.ok) throw new Error('Erreur de détection');
-      
-      const detections = await detectionResponse.json();
-      
-      // Étape 2: Reconnaissance pour chaque visage détecté
-      const recognitionResults = await Promise.all(
-        detections.faces.map(async (box) => {
-          // Extraire le visage du canvas
-          const faceCanvas = document.createElement('canvas');
-          faceCanvas.width = box[2] - box[0];
-          faceCanvas.height = box[3] - box[1];
-          const faceCtx = faceCanvas.getContext('2d');
-          faceCtx.drawImage(
-            canvas, 
-            box[0], box[1], faceCanvas.width, faceCanvas.height,
-            0, 0, faceCanvas.width, faceCanvas.height
-          );
-          
-          // Envoyer pour reconnaissance
-          const faceBlob = await new Promise(resolve => 
-            faceCanvas.toBlob(resolve, 'image/jpeg'));
-          
-          const faceFormData = new FormData();
-          faceFormData.append('file', faceBlob, 'face.jpg');
-          
-          const recognitionResponse = await fetch(
-            `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.RECOGNIZE}`,
-            {
-              method: 'POST',
-              body: faceFormData,
-            }
-          );
-          
-          return recognitionResponse.json();
-        })
-      );
-      
-      // Formater les résultats pour le state
-      return detections.faces.map((box, i) => ({
-        id: `face-${Date.now()}-${i}`,
-        x: box[0],
-        y: box[1],
-        width: box[2] - box[0],
-        height: box[3] - box[1],
-        name: recognitionResults[i]?.face_id ? `Personne ${recognitionResults[i].face_id}` : 'Inconnu',
-        confidence: recognitionResults[i]?.confidence || 0,
-        timestamp: Date.now()
-      }));
-      
-    } catch (error) {
-      console.error('Erreur API:', error);
-      setApiError(`Erreur API: ${error.message}`);
-      setTimeout(() => setApiError(null), 5000);
-      return [];
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Détection automatique
-  const startDetection = () => {
-    if (cameraState !== 'running') return;
-    
-    setIsDetecting(true);
-    let frameCount = 0;
-    let lastTime = performance.now();
-    
-    const detectionInterval = setInterval(async () => {
-      const now = performance.now();
-      const deltaTime = now - lastTime;
-      
-      if (deltaTime >= 1000) {
-        setFps(Math.round((frameCount * 1000) / deltaTime));
-        frameCount = 0;
-        lastTime = now;
-      }
-      
-      const newDetections = await sendFrameToBackend();
-      if (newDetections.length > 0) {
-        setDetections(prev => [
-          ...prev,
-          ...newDetections.map(d => ({
-            ...d,
-            timestamp: Date.now(),
-            id: `${d.id}-${Date.now()}`,
-          }))
-        ].slice(-20));
-        
-        const currentTime = new Date().toLocaleTimeString();
-        setLastDetectionTime(currentTime);
-        if (!isDetecting) {
-          setFrozenDetectionTime(currentTime);
-        }
-      }
-      
-      frameCount++;
-    }, 1000 / 30);
-
-    return () => clearInterval(detectionInterval);
-  };
-
-  // Arrêter la détection
-  const stopDetection = () => {
-    setIsDetecting(false);
-    setFps(0);
-    setFrozenDetectionTime(lastDetectionTime);
-  };
-
-  // Dessiner les détections
-  const drawDetections = useCallback(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    detections.slice(-5).forEach(det => {
-      ctx.strokeStyle = '#FF3B30';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(det.x, det.y, det.width, det.height);
-      
-      ctx.fillStyle = 'rgba(255, 59, 48, 0.7)';
-      ctx.fillRect(det.x, det.y - 20, 120, 20);
-      
-      ctx.fillStyle = 'white';
-      ctx.font = '12px Arial';
-      ctx.fillText(
-        `${det.name} (${Math.round(det.confidence * 100)}%)`,
-        det.x + 5,
-        det.y - 5
-      );
-    });
-  }, [detections]);
-
   // Appliquer une taille prédéfinie
   const applyPresetSize = (size) => {
-    setPresetSize(size);
-    if (cameraState === 'running') setUserSelectedSize(size);
-    
     const containerWidth = containerRef.current?.parentElement?.clientWidth || 800;
     const sizes = {
       small: 0.4,
@@ -313,14 +198,188 @@ const Results = () => {
       full: 1
     };
     
-    setDimensions({
-      width: size === 'full' ? '100%' : `${containerWidth * sizes[size]}px`,
-      height: 'auto',
-      aspectRatio: dimensions.aspectRatio
+    updateState({
+      presetSize: size,
+      userSelectedSize: cameraState === 'running' ? size : userSelectedSize,
+      dimensions: {
+        width: size === 'full' ? '100%' : `${containerWidth * sizes[size]}px`,
+        height: 'auto',
+        aspectRatio: dimensions.aspectRatio
+      }
     });
   };
 
-  // Redimensionnement
+  // Détection avec gestion d'erreur et timeout
+  const sendFrameToBackend = async () => {
+    if (!canvasRef.current || !videoRef.current || isProcessing) return;
+
+    updateState({ isProcessing: true });
+    let blobUrl;
+
+    try {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+      // Conversion en blob
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob(resolve, 'image/jpeg', 0.9);
+      });
+      blobUrl = URL.createObjectURL(blob);
+
+      const formData = new FormData();
+      formData.append('file', blob, 'frame.jpg');
+
+      // Configuration de la requête avec timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+      // Détection des visages
+      const detectionResponse = await fetch(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.DETECT}`,
+        {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
+        }
+      );
+      clearTimeout(timeoutId);
+
+      if (!detectionResponse.ok) throw new Error('Détection échouée');
+      const detectionData = await detectionResponse.json();
+
+      // Reconnaissance faciale pour chaque visage
+      const recognitionPromises = detectionData.faces.map(async (box) => {
+        const faceCanvas = document.createElement('canvas');
+        faceCanvas.width = box[2] - box[0];
+        faceCanvas.height = box[3] - box[1];
+        const faceCtx = faceCanvas.getContext('2d');
+        faceCtx.drawImage(
+          canvas, 
+          box[0], box[1], faceCanvas.width, faceCanvas.height,
+          0, 0, faceCanvas.width, faceCanvas.height
+        );
+
+        const faceBlob = await new Promise(resolve => 
+          faceCanvas.toBlob(resolve, 'image/jpeg'));
+        
+        const faceFormData = new FormData();
+        faceFormData.append('file', faceBlob, 'face.jpg');
+
+        const recognitionResponse = await fetch(
+          `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.RECOGNIZE}`,
+          {
+            method: 'POST',
+            body: faceFormData,
+            signal: controller.signal
+          }
+        );
+        return recognitionResponse.json();
+      });
+
+      const recognitionResults = await Promise.all(recognitionPromises);
+
+      // Formatage des résultats
+      const newDetections = detectionData.faces.map((box, i) => ({
+        id: `face-${Date.now()}-${i}`,
+        box: {
+          x: box[0],
+          y: box[1],
+          width: box[2] - box[0],
+          height: box[3] - box[1]
+        },
+        identity: {
+          name: recognitionResults[i]?.face_id ? `Personne ${recognitionResults[i].face_id}` : 'Inconnu',
+          confidence: recognitionResults[i]?.confidence || 0
+        },
+        timestamp: Date.now()
+      }));
+
+      updateState(prev => ({
+        detections: [...prev.detections, ...newDetections].slice(-20),
+        lastDetectionTime: new Date().toLocaleTimeString(),
+        frozenDetectionTime: !isDetecting ? new Date().toLocaleTimeString() : prev.frozenDetectionTime
+      }));
+
+    } catch (error) {
+      console.error('Erreur API:', error);
+      updateState({
+        apiError: `Erreur: ${error.name === 'AbortError' ? 'Délai dépassé' : error.message}`
+      });
+      setTimeout(() => updateState({ apiError: null }), 5000);
+    } finally {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      updateState({ isProcessing: false });
+    }
+  };
+
+  // Boucle de détection optimisée
+  useEffect(() => {
+    let animationId;
+    let lastTimestamp = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = performance.now();
+
+    const detectionLoop = (timestamp) => {
+      if (isDetecting && cameraState === 'running') {
+        // Limiter à ~15 FPS pour réduire la charge CPU
+        if (timestamp - lastTimestamp >= 1000 / 15) {
+          sendFrameToBackend();
+          lastTimestamp = timestamp;
+          frameCount++;
+        }
+
+        // Mettre à jour les FPS toutes les secondes
+        if (timestamp - lastFpsUpdate >= 1000) {
+          updateState({ fps: Math.round((frameCount * 1000) / (timestamp - lastFpsUpdate)) });
+          frameCount = 0;
+          lastFpsUpdate = timestamp;
+        }
+      }
+      animationId = requestAnimationFrame(detectionLoop);
+    };
+
+    animationId = requestAnimationFrame(detectionLoop);
+    return () => cancelAnimationFrame(animationId);
+  }, [isDetecting, cameraState]);
+
+  // Dessin des détections
+  const drawDetections = useCallback(() => {
+    if (!canvasRef.current || detections.length === 0) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Dessiner seulement les 5 dernières détections
+    detections.slice(-5).forEach(det => {
+      const { x, y, width, height } = det.box;
+      const { name, confidence } = det.identity;
+
+      // Box de détection
+      ctx.strokeStyle = confidence > 0.8 ? '#4CD964' : '#FF3B30';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, width, height);
+      
+      // Label
+      ctx.fillStyle = confidence > 0.8 ? 'rgba(76, 217, 100, 0.7)' : 'rgba(255, 59, 48, 0.7)';
+      ctx.fillRect(x, y - 20, 120, 20);
+      
+      ctx.fillStyle = 'white';
+      ctx.font = '12px Arial';
+      ctx.fillText(
+        `${name} (${Math.round(confidence * 100)}%)`,
+        x + 5,
+        y - 5
+      );
+    });
+  }, [detections]);
+
+  useEffect(() => {
+    if (detections.length > 0) drawDetections();
+  }, [detections, drawDetections]);
+
+  // Redimensionnement manuel
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isResizing || !containerRef.current) return;
@@ -330,15 +389,17 @@ const Results = () => {
       const newWidth = Math.min(maxWidth, Math.max(300, e.clientX - containerRect.left));
       const newHeight = newWidth / dimensions.aspectRatio;
       
-      setDimensions({
-        width: `${newWidth}px`,
-        height: `${newHeight}px`,
-        aspectRatio: dimensions.aspectRatio
+      updateState({
+        dimensions: {
+          width: `${newWidth}px`,
+          height: `${newHeight}px`,
+          aspectRatio: dimensions.aspectRatio
+        },
+        presetSize: 'custom'
       });
-      setPresetSize('custom');
     };
 
-    const handleMouseUp = () => setIsResizing(false);
+    const handleMouseUp = () => updateState({ isResizing: false });
 
     if (isResizing) {
       window.addEventListener('mousemove', handleMouseMove);
@@ -351,27 +412,40 @@ const Results = () => {
     };
   }, [isResizing, dimensions.aspectRatio]);
 
-  // Détection automatique
-  useEffect(() => {
-    if (isDetecting && cameraState === 'running') {
-      const cleanup = startDetection();
-      return cleanup;
-    }
-  }, [isDetecting, cameraState]);
-
-  // Dessiner les détections
-  useEffect(() => {
-    if (detections.length > 0) drawDetections();
-  }, [detections, drawDetections]);
-
   // Nettoyage
-  useEffect(() => stopCamera, []);
+  useEffect(() => {
+    return () => {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+    };
+  }, [stream]);
+
+  // Exporter les détections
+  const exportDetections = (format = 'json') => {
+    const data = {
+      timestamp: new Date().toISOString(),
+      detections: detections,
+      videoResolution: {
+        width: videoRef.current?.videoWidth || 0,
+        height: videoRef.current?.videoHeight || 0
+      }
+    };
+
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
 
   return (
     <div className="results-page">
       {/* Message d'erreur */}
       {apiError && (
-        <div className="error-banner">
+        <div className="error-banner" role="alert">
           <WarningIcon size={18} />
           {apiError}
         </div>
@@ -379,7 +453,7 @@ const Results = () => {
 
       {/* Indicateur de chargement */}
       {isProcessing && (
-        <div className="processing-overlay">
+        <div className="processing-overlay" aria-live="polite">
           <div className="processing-spinner"></div>
           <p>Analyse en cours...</p>
         </div>
@@ -391,7 +465,7 @@ const Results = () => {
           Détection en Temps Réel
         </h2>
         <button 
-          onClick={() => setShowDetectionInfo(!showDetectionInfo)}
+          onClick={() => updateState({ showDetectionInfo: !showDetectionInfo })}
           className="info-btn"
           aria-label="Afficher les informations de détection"
         >
@@ -410,7 +484,7 @@ const Results = () => {
               <li><strong>Résolution :</strong> 1280x720 recommandée</li>
             </ul>
             <button 
-              onClick={() => setShowDetectionInfo(false)}
+              onClick={() => updateState({ showDetectionInfo: false })}
               className="close-info-btn"
             >
               <ClearIcon size={16} /> Fermer
@@ -436,14 +510,16 @@ const Results = () => {
             playsInline 
             muted
             className={`video-preview ${cameraState === 'paused' ? 'paused' : ''}`}
+            aria-label="Flux de la caméra"
           />
           <canvas ref={canvasRef} className="detection-canvas" />
           
           <div 
             ref={resizeHandleRef}
             className="resize-handle"
-            onMouseDown={() => setIsResizing(true)}
+            onMouseDown={() => updateState({ isResizing: true })}
             title="Redimensionner la vue"
+            aria-label="Redimensionner la vue"
           >
             <ResizeIcon size={18} />
           </div>
@@ -466,36 +542,63 @@ const Results = () => {
         
         <div className="controls">
           {cameraState === 'stopped' ? (
-            <button onClick={startCamera} className="control-btn start-btn">
+            <button 
+              onClick={() => handleCamera('start')} 
+              className="control-btn start-btn"
+              aria-label="Démarrer la caméra"
+            >
               <CameraIcon size={18} className="icon" />
               Démarrer la caméra
             </button>
           ) : (
             <>
               <div className="control-group">
-                <button onClick={stopCamera} className="control-btn stop-btn">
+                <button 
+                  onClick={() => handleCamera('stop')} 
+                  className="control-btn stop-btn"
+                  aria-label="Arrêter la caméra"
+                >
                   <StopIcon size={18} className="icon" />
                   Arrêter
                 </button>
                 
                 {cameraState === 'running' ? (
-                  <button onClick={pauseCamera} className="control-btn pause-btn">
+                  <button 
+                    onClick={() => handleCamera('pause')} 
+                    className="control-btn pause-btn"
+                    aria-label="Mettre en pause"
+                  >
                     <PauseIcon size={18} className="icon" />
                     Pause
                   </button>
                 ) : (
-                  <button onClick={resumeCamera} className="control-btn start-btn">
+                  <button 
+                    onClick={() => handleCamera('resume')} 
+                    className="control-btn start-btn"
+                    aria-label="Reprendre la caméra"
+                  >
                     <PlayIcon size={18} className="icon" />
                     Reprendre
                   </button>
                 )}
+
+                <button 
+                  onClick={switchCamera}
+                  className="control-btn switch-btn"
+                  aria-label="Changer de caméra"
+                >
+                  <SwitchCameraIcon size={18} className="icon" />
+                  Caméra
+                </button>
               </div>
               
               <div className="control-group">
                 <button 
-                  onClick={isDetecting ? stopDetection : startDetection} 
+                  onClick={() => updateState({ isDetecting: !isDetecting })} 
                   className={`control-btn ${isDetecting ? 'active-btn' : 'detect-btn'}`}
                   disabled={cameraState !== 'running' || isProcessing}
+                  aria-label={isDetecting ? 'Arrêter la détection' : 'Démarrer la détection'}
+                  aria-busy={isProcessing}
                 >
                   {isDetecting ? (
                     <StopCircleIcon size={18} className="icon" />
@@ -509,6 +612,7 @@ const Results = () => {
                   onClick={sendFrameToBackend} 
                   className="control-btn detect-btn"
                   disabled={cameraState !== 'running' || isProcessing}
+                  aria-label="Détection manuelle"
                 >
                   <SearchIcon size={18} className="icon" />
                   Détection manuelle
@@ -518,24 +622,9 @@ const Results = () => {
               <div className="control-group">
                 {detections.length > 0 && (
                   <button 
-                    onClick={() => {
-                      const data = {
-                        timestamp: new Date().toISOString(),
-                        detections: detections,
-                        videoResolution: {
-                          width: videoRef.current?.videoWidth || 0,
-                          height: videoRef.current?.videoHeight || 0
-                        }
-                      };
-                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }} 
+                    onClick={() => exportDetections('json')} 
                     className="control-btn save-btn"
+                    aria-label="Exporter les détections"
                   >
                     <DownloadIcon size={18} className="icon" />
                     Exporter données
@@ -556,6 +645,7 @@ const Results = () => {
               key={size}
               onClick={() => applyPresetSize(size)}
               className={`size-btn ${presetSize === size ? 'active' : ''}`}
+              aria-label={`Taille ${size}`}
             >
               {size === 'small' && 'Petit'}
               {size === 'medium' && 'Moyen'}
@@ -577,31 +667,17 @@ const Results = () => {
             {detections.length > 0 && (
               <>
                 <button 
-                  onClick={() => setDetections([])} 
+                  onClick={() => updateState({ detections: [] })} 
                   className="action-btn clear-btn"
+                  aria-label="Effacer toutes les détections"
                 >
                   <TrashIcon size={16} className="icon" />
                   Effacer tout
                 </button>
                 <button 
-                  onClick={() => {
-                    const data = {
-                      timestamp: new Date().toISOString(),
-                      detections: detections,
-                      videoResolution: {
-                        width: videoRef.current?.videoWidth || 0,
-                        height: videoRef.current?.videoHeight || 0
-                      }
-                    };
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }} 
+                  onClick={() => exportDetections('json')} 
                   className="action-btn save-btn"
+                  aria-label="Exporter en JSON"
                 >
                   <DownloadIcon size={16} className="icon" />
                   Exporter JSON
@@ -618,11 +694,11 @@ const Results = () => {
                 <div className="face-info">
                   <h4>
                     <PersonIcon size={14} className="icon" />
-                    {face.name}
+                    {face.identity.name}
                   </h4>
-                  <p><strong>Confiance:</strong> {Math.round(face.confidence * 100)}%</p>
-                  <p><strong>Position:</strong> {Math.round(face.x)}px, {Math.round(face.y)}px</p>
-                  <p><strong>Taille:</strong> {Math.round(face.width)}×{Math.round(face.height)}</p>
+                  <p><strong>Confiance:</strong> {Math.round(face.identity.confidence * 100)}%</p>
+                  <p><strong>Position:</strong> {Math.round(face.box.x)}px, {Math.round(face.box.y)}px</p>
+                  <p><strong>Taille:</strong> {Math.round(face.box.width)}×{Math.round(face.box.height)}</p>
                   <p className="timestamp">
                     <small>{new Date(face.timestamp).toLocaleTimeString()}</small>
                   </p>
@@ -632,10 +708,11 @@ const Results = () => {
                     className="face-preview" 
                     style={{
                       backgroundImage: `url(${canvasRef.current?.toDataURL() || ''})`,
-                      backgroundPosition: `-${Math.round(face.x)}px -${Math.round(face.y)}px`,
-                      width: `${Math.round(face.width)}px`,
-                      height: `${Math.round(face.height)}px`
+                      backgroundPosition: `-${Math.round(face.box.x)}px -${Math.round(face.box.y)}px`,
+                      width: `${Math.round(face.box.width)}px`,
+                      height: `${Math.round(face.box.height)}px`
                     }}
+                    aria-label={`Aperçu du visage de ${face.identity.name}`}
                   />
                   <div className="face-preview-label">
                     <ImageIcon size={12} /> Aperçu
