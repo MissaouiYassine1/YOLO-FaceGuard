@@ -1,35 +1,33 @@
+from core.config import YOLO_MODEL_PATH, FACENET_MODEL_PATH
 import requests
 import os
 from pathlib import Path
-from core.config import MODEL_DIR, FACE_DETECTION_MODEL, FACE_RECOGNITION_MODEL
 
-MODEL_URLS = {
-    "yolov8n-face.pt": "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n-face.pt",
-    "facenet_keras.h5": "https://drive.google.com/uc?export=download&id=1PZ_6Zsy1Vb0s0JmjEmVd8FS99zoMCiN1"
-}
-
-def download_file(url: str, destination: Path):
-    print(f"Downloading {url}...")
+def download_file(url, destination):
+    Path(destination.parent).mkdir(parents=True, exist_ok=True)
+    
+    print(f"Téléchargement {url}...")
     response = requests.get(url, stream=True)
     response.raise_for_status()
     
     with open(destination, 'wb') as f:
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
-    print(f"Saved to {destination}")
-
-def main():
-    os.makedirs(MODEL_DIR, exist_ok=True)
-    
-    # Télécharger YOLO face model
-    if not FACE_DETECTION_MODEL.exists():
-        download_file(MODEL_URLS["yolov8n-face.pt"], FACE_DETECTION_MODEL)
-    
-    # Télécharger Facenet model
-    if not FACE_RECOGNITION_MODEL.exists():
-        download_file(MODEL_URLS["facenet_keras.h5"], FACE_RECOGNITION_MODEL)
-    
-    print("All models downloaded successfully!")
+    print(f"✅ Téléchargé à {destination}")
 
 if __name__ == "__main__":
-    main()
+    # YOLOv8n-face
+    if not YOLO_MODEL_PATH.exists():
+        download_file(
+            "https://github.com/akanametov/yolov8-face/releases/download/v0.0.0/yolov8n-face.pt",
+            YOLO_MODEL_PATH
+        )
+    
+    # Facenet (version Keras)
+    if not FACENET_MODEL_PATH.exists():
+        download_file(
+            "https://drive.google.com/uc?export=download&id=1PZ_6Zsy1Vb0s0JmjEmVd8FS99zoMCiN1",
+            FACENET_MODEL_PATH
+        )
+    
+    print("✅ Tous les modèles sont prêts!")
