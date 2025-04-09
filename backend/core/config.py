@@ -1,20 +1,20 @@
-"""import os
 from pathlib import Path
 
-# Chemins des modèles
-MODEL_DIR = Path(__file__).parent.parent / "models"
-FACE_DETECTION_MODEL = MODEL_DIR / "yolov8n-face.pt"
-FACE_RECOGNITION_MODEL = MODEL_DIR / "facenet_keras.h5"
+# Chemins absolus
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODELS_DIR = BASE_DIR / "ml_models"
+
+# Configuration YOLO
+YOLO_MODEL_PATH = MODELS_DIR / "detection" / "yolov8n-face.pt"
+YOLO_CONFIDENCE = 0.7
+
+# Configuration Facenet
+FACENET_MODEL_PATH = MODELS_DIR / "recognition" / "facenet_keras.h5"
+FACENET_INPUT_SIZE = (160, 160)
+FACENET_THRESHOLD = 0.8
 
 # Base de données
-DATABASE_DIR = Path(__file__).parent.parent / "database"
-FACE_DATABASE = DATABASE_DIR / "faces.db"
-EMBEDDINGS_FILE = DATABASE_DIR / "embeddings.npy"
+DATABASE_PATH = BASE_DIR / "database" / "faces.db"
+EMBEDDINGS_PATH = BASE_DIR / "database" / "embeddings.npy"
 
-# Paramètres de reconnaissance
-FACE_MATCH_THRESHOLD = 0.7  # Seuil de similarité
-MAX_FACES_TO_STORE = 1000   # Nombre maximum de visages à enregistrer
-
-# Créer les répertoires s'ils n'existent pas
-os.makedirs(DATABASE_DIR, exist_ok=True)
-os.makedirs(MODEL_DIR, exist_ok=True)"""
+print("✅ Configuration chargée avec succès!")
