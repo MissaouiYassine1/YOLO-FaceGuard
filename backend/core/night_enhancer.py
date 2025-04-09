@@ -1,4 +1,4 @@
-import cv2
+'''import cv2
 import numpy as np
 
 class NightEnhancer:
@@ -23,4 +23,4 @@ class NightEnhancer:
         # Réduction du bruit
         enhanced = cv2.fastNlMeansDenoisingColored(enhanced, None, 10, 10, 7, 21)
         
-        return enhanced
+        return enhanced'''

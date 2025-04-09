@@ -1,4 +1,4 @@
-import os
+"""import os
 from pathlib import Path
 
 # Chemins des modèles
@@ -17,4 +17,4 @@ MAX_FACES_TO_STORE = 1000   # Nombre maximum de visages à enregistrer
 
 # Créer les répertoires s'ils n'existent pas
 os.makedirs(DATABASE_DIR, exist_ok=True)
-os.makedirs(MODEL_DIR, exist_ok=True)
+os.makedirs(MODEL_DIR, exist_ok=True)"""
