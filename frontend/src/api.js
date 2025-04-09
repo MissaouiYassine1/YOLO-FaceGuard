@@ -1,29 +1,24 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export const faceAPI = {
-  // Détection
-  detect: async (imageFile) => {
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    return axios.post(`${API_BASE}/detect`, formData, {
-      headers: {'Content-Type': 'multipart/form-data'}
-    });
-  },
-
-  // Reconnaissance
-  recognize: async (imageFile) => {
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    return axios.post(`${API_BASE}/recognize`, formData);
-  },
-
-  // Enregistrement
-  register: async (name, imageFile) => {
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('image', imageFile);
-    return axios.post(`${API_API}/register`, formData);
-  }
+    detect: async (image) => {
+        const formData = new FormData();
+        formData.append('image', image);
+        return axios.post(`${API_BASE}/api/detect`, formData);
+    },
+    recognize: async (faceImage) => {
+        const formData = new FormData();
+        formData.append('face', faceImage);
+        return axios.post(`${API_BASE}/api/recognize`, formData);
+    },
+    register: async (name, images) => {
+        const formData = new FormData();
+        formData.append('name', name);
+        images.forEach(img => {
+            formData.append('images', img.blob, `face_${Date.now()}.jpg`);
+        });
+        return axios.post(`${API_BASE}/api/register`, formData);
+    }
 };
