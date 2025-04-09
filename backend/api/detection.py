@@ -1,19 +1,20 @@
-from fastapi import APIRouter, UploadFile, Query
-from ..core.face_detector import detect_faces
-from ..core.face_recognizer import recognize_face
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from core.face_detector import YOLOFaceDetector
 import cv2
 import numpy as np
 
 router = APIRouter()
+detector = YOLOFaceDetector("ml_models/detection/yolov8n-face.pt")
 
 @router.post("/detect")
-async def detect_faces_endpoint(
-    file: UploadFile,
-    min_confidence: float = Query(0.5, description="Seuil minimal de confiance")
-):
-    contents = await file.read()
-    nparr = np.frombuffer(contents, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    
-    faces = detect_faces(img, min_confidence)  # Doit retourner [[x1,y1,x2,y2],...]
-    return {"faces": faces}
+async def detect_faces(image: UploadFile = File(...)):
+    try:
+        contents = await image.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        faces = detector.detect(img)
+        return {"faces": faces}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Detection error: {str(e)}")

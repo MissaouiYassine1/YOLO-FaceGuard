@@ -21,16 +21,7 @@ import {
   IoWarning as WarningIcon,
   IoCameraReverse as SwitchCameraIcon
 } from 'react-icons/io5';
-
-// Configuration API
-const API_CONFIG = {
-  BASE_URL: 'http://localhost:8000',
-  ENDPOINTS: {
-    DETECT: '/api/detect',
-    RECOGNIZE: '/api/recognize'
-  },
-  TIMEOUT: 10000 // 10 seconds
-};
+import { faceAPI } from '../api';
 
 document.title = "YOLO FaceGuard - Résultats";
 
@@ -44,9 +35,9 @@ const Results = () => {
   // État unifié
   const [state, setState] = useState({
     // Camera
-    cameraState: 'stopped', // 'stopped' | 'running' | 'paused'
+    cameraState: 'stopped',
     stream: null,
-    activeCamera: 'user', // 'user' | 'environment'
+    activeCamera: 'user',
     
     // Detection
     detections: [],
@@ -95,25 +86,19 @@ const Results = () => {
     setState(prev => ({ ...prev, ...newState }));
   };
 
-  // Démarrer/arrêter la caméra
+  // Gestion de la caméra
   const handleCamera = async (action) => {
     try {
       if (action === 'start' || action === 'switch') {
-        if (!navigator.mediaDevices) {
-          throw new Error("Accès à la caméra non supporté");
-        }
-
-        // Arrêter le flux existant si on switch
         if (action === 'switch' && stream) {
           stream.getTracks().forEach(track => track.stop());
         }
 
         const constraints = {
           video: { 
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
             facingMode: activeCamera,
-            frameRate: { ideal: 30 }
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
           }
         };
 
@@ -137,12 +122,8 @@ const Results = () => {
         applyPresetSize(userSelectedSize || 'small');
       } 
       else if (action === 'stop') {
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-        }
-        if (videoRef.current) {
-          videoRef.current.srcObject = null;
-        }
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        if (videoRef.current) videoRef.current.srcObject = null;
         updateState({
           stream: null,
           cameraState: 'stopped',
@@ -153,10 +134,7 @@ const Results = () => {
       }
       else if (action === 'pause' && stream) {
         stream.getTracks().forEach(track => track.enabled = false);
-        updateState({
-          cameraState: 'paused',
-          isDetecting: false
-        });
+        updateState({ cameraState: 'paused', isDetecting: false });
       }
       else if (action === 'resume' && stream) {
         stream.getTracks().forEach(track => track.enabled = true);
@@ -172,7 +150,7 @@ const Results = () => {
     }
   };
 
-  // Switch entre caméra avant/arrière
+  // Switch caméra
   const switchCamera = () => {
     updateState(prev => ({
       activeCamera: prev.activeCamera === 'user' ? 'environment' : 'user'
@@ -180,7 +158,7 @@ const Results = () => {
     handleCamera('switch');
   };
 
-  // Redimensionnement canvas
+  // Redimensionnement
   const updateCanvasSize = useCallback(() => {
     if (canvasRef.current && videoRef.current) {
       canvasRef.current.width = videoRef.current.videoWidth;
@@ -188,7 +166,6 @@ const Results = () => {
     }
   }, []);
 
-  // Appliquer une taille prédéfinie
   const applyPresetSize = (size) => {
     const containerWidth = containerRef.current?.parentElement?.clientWidth || 800;
     const sizes = {
@@ -200,7 +177,7 @@ const Results = () => {
     
     updateState({
       presetSize: size,
-      userSelectedSize: cameraState === 'running' ? size : userSelectedSize,
+      userSelectedSize: size,
       dimensions: {
         width: size === 'full' ? '100%' : `${containerWidth * sizes[size]}px`,
         height: 'auto',
@@ -209,46 +186,21 @@ const Results = () => {
     });
   };
 
-  // Détection avec gestion d'erreur et timeout
+  // Détection faciale
   const sendFrameToBackend = async () => {
     if (!canvasRef.current || !videoRef.current || isProcessing) return;
 
     updateState({ isProcessing: true });
-    let blobUrl;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
     try {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      // Détection
+      const detectionResponse = await faceAPI.detect(canvas);
+      const detectionData = detectionResponse.data;
 
-      // Conversion en blob
-      const blob = await new Promise((resolve) => {
-        canvas.toBlob(resolve, 'image/jpeg', 0.9);
-      });
-      blobUrl = URL.createObjectURL(blob);
-
-      const formData = new FormData();
-      formData.append('file', blob, 'frame.jpg');
-
-      // Configuration de la requête avec timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
-
-      // Détection des visages
-      const detectionResponse = await fetch(
-        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.DETECT}`,
-        {
-          method: 'POST',
-          body: formData,
-          signal: controller.signal
-        }
-      );
-      clearTimeout(timeoutId);
-
-      if (!detectionResponse.ok) throw new Error('Détection échouée');
-      const detectionData = await detectionResponse.json();
-
-      // Reconnaissance faciale pour chaque visage
+      // Reconnaissance pour chaque visage
       const recognitionPromises = detectionData.faces.map(async (box) => {
         const faceCanvas = document.createElement('canvas');
         faceCanvas.width = box[2] - box[0];
@@ -260,21 +212,8 @@ const Results = () => {
           0, 0, faceCanvas.width, faceCanvas.height
         );
 
-        const faceBlob = await new Promise(resolve => 
-          faceCanvas.toBlob(resolve, 'image/jpeg'));
-        
-        const faceFormData = new FormData();
-        faceFormData.append('file', faceBlob, 'face.jpg');
-
-        const recognitionResponse = await fetch(
-          `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.RECOGNIZE}`,
-          {
-            method: 'POST',
-            body: faceFormData,
-            signal: controller.signal
-          }
-        );
-        return recognitionResponse.json();
+        const recognitionResponse = await faceAPI.recognize(faceCanvas);
+        return recognitionResponse.data;
       });
 
       const recognitionResults = await Promise.all(recognitionPromises);
@@ -304,16 +243,15 @@ const Results = () => {
     } catch (error) {
       console.error('Erreur API:', error);
       updateState({
-        apiError: `Erreur: ${error.name === 'AbortError' ? 'Délai dépassé' : error.message}`
+        apiError: `Erreur: ${error.response?.data?.detail || error.message}`
       });
       setTimeout(() => updateState({ apiError: null }), 5000);
     } finally {
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
       updateState({ isProcessing: false });
     }
   };
 
-  // Boucle de détection optimisée
+  // Boucle de détection
   useEffect(() => {
     let animationId;
     let lastTimestamp = 0;
@@ -322,14 +260,12 @@ const Results = () => {
 
     const detectionLoop = (timestamp) => {
       if (isDetecting && cameraState === 'running') {
-        // Limiter à ~15 FPS pour réduire la charge CPU
         if (timestamp - lastTimestamp >= 1000 / 15) {
           sendFrameToBackend();
           lastTimestamp = timestamp;
           frameCount++;
         }
 
-        // Mettre à jour les FPS toutes les secondes
         if (timestamp - lastFpsUpdate >= 1000) {
           updateState({ fps: Math.round((frameCount * 1000) / (timestamp - lastFpsUpdate)) });
           frameCount = 0;
@@ -351,12 +287,11 @@ const Results = () => {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Dessiner seulement les 5 dernières détections
     detections.slice(-5).forEach(det => {
       const { x, y, width, height } = det.box;
       const { name, confidence } = det.identity;
 
-      // Box de détection
+      // Box
       ctx.strokeStyle = confidence > 0.8 ? '#4CD964' : '#FF3B30';
       ctx.lineWidth = 2;
       ctx.strokeRect(x, y, width, height);
@@ -379,39 +314,6 @@ const Results = () => {
     if (detections.length > 0) drawDetections();
   }, [detections, drawDetections]);
 
-  // Redimensionnement manuel
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isResizing || !containerRef.current) return;
-      
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const maxWidth = containerRef.current.parentElement.clientWidth;
-      const newWidth = Math.min(maxWidth, Math.max(300, e.clientX - containerRect.left));
-      const newHeight = newWidth / dimensions.aspectRatio;
-      
-      updateState({
-        dimensions: {
-          width: `${newWidth}px`,
-          height: `${newHeight}px`,
-          aspectRatio: dimensions.aspectRatio
-        },
-        presetSize: 'custom'
-      });
-    };
-
-    const handleMouseUp = () => updateState({ isResizing: false });
-
-    if (isResizing) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing, dimensions.aspectRatio]);
-
   // Nettoyage
   useEffect(() => {
     return () => {
@@ -419,8 +321,8 @@ const Results = () => {
     };
   }, [stream]);
 
-  // Exporter les détections
-  const exportDetections = (format = 'json') => {
+  // Export des données
+  const exportDetections = () => {
     const data = {
       timestamp: new Date().toISOString(),
       detections: detections,
@@ -430,15 +332,13 @@ const Results = () => {
       }
     };
 
-    if (format === 'json') {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (

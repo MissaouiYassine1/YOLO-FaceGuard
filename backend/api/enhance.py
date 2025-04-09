@@ -1,37 +1,25 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from core.night_enhancer import NightEnhancer
-import numpy as np
 import cv2
-import base64
+import numpy as np
 
-router = APIRouter(prefix="/api/v1", tags=["Enhancement"])
+router = APIRouter()
 enhancer = NightEnhancer()
 
-class EnhanceResponse(BaseModel):
-    enhanced_image: str  # Base64 encoded image
-
 @router.post("/enhance")
-async def enhance_image(file: UploadFile = File(...)):
-    """Endpoint pour améliorer les images sous faible éclairage"""
+async def enhance_image(image: UploadFile = File(...)):
     try:
-        # Convertir l'image uploadée en format OpenCV
-        contents = await file.read()
+        contents = await image.read()
         nparr = np.frombuffer(contents, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
-        if image is None:
-            raise HTTPException(status_code=400, detail="Impossible de décoder l'image")
-
-        # Amélioration de l'image
-        enhanced = enhancer.enhance(image)
+        enhanced_img = enhancer.enhance(img)
         
-        # Encodage en base64 pour la réponse
-        _, buffer = cv2.imencode('.jpg', enhanced)
-        encoded_image = base64.b64encode(buffer).decode('utf-8')
+        # Convertir l'image améliorée en bytes
+        _, encoded_img = cv2.imencode('.jpg', enhanced_img)
+        enhanced_bytes = encoded_img.tobytes()
         
-        return {"enhanced_image": encoded_image}
+        return {"enhanced_image": enhanced_bytes}
+        
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erreur lors de l'amélioration de l'image: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Enhancement error: {str(e)}")
