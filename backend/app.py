@@ -1,21 +1,20 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from api.detection import router as detection_router
-from api.recognition import router as recognition_router
-from api.enhance import router as enhance_router
+import uvicorn
 
-app = FastAPI(title="YOLO-FaceGuard API")
+app = FastAPI(title="YOLO FaceGuard API")
 
 # Configuration CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Inclusion des routes
-app.include_router(detection_router, prefix="/api")
-app.include_router(recognition_router, prefix="/api")
-app.include_router(enhance_router, prefix="/api")
+@app.get("/")
+def read_root():
+    return {"message": "FaceGuard API is running"}
+
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
