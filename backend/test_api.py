@@ -18,6 +18,17 @@ def test_detection():
     print("✅ Test detection endpoint réussi")
     print("Réponse:", response.json())
 
+def test_recognition():
+    test_file = "../frontend/src/assets/images/personne.png"
+    with open(test_file, "rb") as f:
+        files = {"file": f}
+        response = requests.post(f"{BASE_URL}/api/recognize", files=files)
+    
+    assert response.status_code == 200
+    print("✅ Test recognition endpoint réussi")
+    print("Réponse:", response.json())
+
 if __name__ == "__main__":
     test_root()
     test_detection()
+    test_recognition()

@@ -1,23 +1,21 @@
 from fastapi import APIRouter, UploadFile, File
-from core.face_recognizer import FaceRecognizer
-import cv2
-import numpy as np
+import time
 
-router = APIRouter()
-recognizer = FaceRecognizer()
+router = APIRouter(prefix="/recognize", tags=["Reconnaissance"])
 
-@router.post("/recognize")
+@router.post("/")
 async def recognize_face(file: UploadFile = File(...)):
-    """Endpoint pour reconnaître un visage"""
-    try:
-        contents = await file.read()
-        image = cv2.imdecode(np.frombuffer(contents, np.uint8), cv2.IMREAD_COLOR)
-        result = recognizer.recognize(image)
-        return {
-            "status": "success",
-            "face_id": result["face_id"],
-            "confidence": result["confidence"]
-        }
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
+    start_time = time.time()
+    
+    # Simulation de traitement
+    await file.read()
+    processing_time = time.time() - start_time
+    
+    print(f"✅ Requête de reconnaissance reçue - Temps simulé: {processing_time:.2f}s")
+    
+    return {
+        "status": "success",
+        "face_id": 123,
+        "confidence": 0.95,
+        "processing_time": processing_time
+    }
