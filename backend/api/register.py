@@ -1,24 +1,30 @@
-from fastapi import APIRouter, UploadFile, File, Form
-from core.face_recognizer import FaceRecognizer
-import cv2
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from typing import List
+from database.database import get_db
+from database import crud
+from sqlalchemy.orm import Session
 import numpy as np
 
-router = APIRouter()
-recognizer = FaceRecognizer()
+router = APIRouter(prefix="/register", tags=["Registration"])
 
-@router.post("/register")
+@router.post("/")
 async def register_face(
-    name: str = Form(...),
-    files: list[UploadFile] = File(...)
+    name: str,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db)
 ):
-    """Endpoint pour enregistrer un nouveau visage"""
     try:
-        for file in files:
-            contents = await file.read()
-            image = cv2.imdecode(np.frombuffer(contents, np.uint8), cv2.IMREAD_COLOR)
-            recognizer.register_face(image, name)
+        # Simulation d'embedding (remplacé par Facenet plus tard)
+        fake_embedding = np.random.rand(128)
         
-        return {"status": "success", "message": f"{len(files)} images enregistrées pour {name}"}
+        # Enregistrement en base
+        face = crud.create_face(db, name=name, embedding=fake_embedding)
+        
+        return {
+            "status": "success",
+            "face_id": face.id,
+            "name": face.name,
+            "created_at": face.created_at
+        }
     except Exception as e:
-        return {"status": "error", "message": str(e)}
-
+        raise HTTPException(status_code=400, detail=str(e))
