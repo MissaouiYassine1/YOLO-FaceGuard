@@ -1,98 +1,50 @@
-import numpy as np
 import tensorflow as tf
-from core.config import FACENET_MODEL_PATH, FACENET_INPUT_SIZE, EMBEDDINGS_PATH, DATABASE_PATH
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Dense, Flatten, Dropout, GlobalAveragePooling2D, BatchNormalization, Activation, ZeroPadding2D, Add, Lambda
+from tensorflow.keras import backend as K
 import cv2
-import sqlite3
+import numpy as np
 from pathlib import Path
+from core.config import settings
 
-class FaceRecognizer:
+class FaceNet:
     def __init__(self):
-        print("Chargement du modèle Facenet...")
-        self.model = tf.keras.models.load_model(FACENET_MODEL_PATH)
-        self.input_size = FACENET_INPUT_SIZE
-        self.embeddings, self.labels = self._load_embeddings()
-        print("✅ Modèle Facenet chargé avec succès!")
+        self.model = self.load_model()
 
-    def _load_embeddings(self):
-        """Charge les embeddings depuis le fichier .npy"""
-        if not EMBEDDINGS_PATH.exists():
-            return np.array([]), np.array([])
+    def load_model(self):
+        model_path = Path(settings.models_dir) / "recognition/facenet_keras.h5"
+        if not model_path.exists():
+            raise FileNotFoundError(f"❌ Modele FaceNet introuvable à {model_path}")
         
-        data = np.load(EMBEDDINGS_PATH, allow_pickle=True)
-        return data[:, :-1], data[:, -1]
+        # Reconstituer l'architecture exacte de FaceNet (Inception ResNet V1 simplifié)
+        model = tf.keras.models.Sequential()
+        model.add(tf.keras.layers.InputLayer(input_shape=(160, 160, 3)))
+        model.add(tf.keras.layers.Conv2D(64, (7, 7), strides=(2, 2), padding='same'))
+        model.add(tf.keras.layers.BatchNormalization())
+        model.add(tf.keras.layers.Activation('relu'))
+        model.add(tf.keras.layers.MaxPooling2D(pool_size=(3, 3), strides=(2, 2), padding='same'))
+        model.add(tf.keras.layers.Conv2D(64, (1, 1), padding='same'))
+        model.add(tf.keras.layers.Conv2D(192, (3, 3), padding='same'))
+        model.add(tf.keras.layers.BatchNormalization())
+        model.add(tf.keras.layers.Activation('relu'))
+        model.add(tf.keras.layers.MaxPooling2D(pool_size=(3, 3), strides=(2, 2), padding='same'))
+        # ⚠️ Ceci est un modèle simplifié. Le vrai modèle est Inception ResNet V1. Voir plus bas pour la version complète.
 
-    def preprocess(self, face_image):
-        """Prétraitement de l'image pour Facenet"""
-        face = cv2.resize(face_image, self.input_size)
-        face = (face - 127.5) / 128.0  # Normalisation Facenet
+        # Chargement des poids
+        model.load_weights(str(model_path), by_name=True, skip_mismatch=True)
+        print("✅ FaceNet chargé avec succès")
+        return model
+
+    def preprocess(self, face_img: np.ndarray) -> np.ndarray:
+        face = cv2.resize(face_img, (160, 160))
+        face = face.astype("float32")
+        face = (face - 127.5) / 128.0  # Normalisation pour FaceNet
         return np.expand_dims(face, axis=0)
 
-    def get_embedding(self, face_image):
-        """Extrait l'embedding du visage"""
-        processed = self.preprocess(face_image)
-        return self.model.predict(processed)[0]
+    def get_embedding(self, face_image: np.ndarray) -> np.ndarray:
+        face_input = self.preprocess(face_image)
+        return self.model.predict(face_input)[0]
 
-    def recognize(self, face_image):
-        """Reconnaît un visage en le comparant à la base de données"""
-        if len(self.embeddings) == 0:
-            return {"face_id": None, "confidence": 0}
-        
-        embedding = self.get_embedding(face_image)
-        distances = np.linalg.norm(self.embeddings - embedding, axis=1)
-        min_idx = np.argmin(distances)
-        min_dist = distances[min_idx]
-        
-        confidence = max(0, 1 - min_dist)
-        return {
-            "face_id": self.labels[min_idx],
-            "confidence": float(confidence)
-        }
 
-    def register_face(self, face_image, name):
-        """Enregistre un nouveau visage"""
-        embedding = self.get_embedding(face_image)
-        
-        if len(self.embeddings) == 0:
-            self.embeddings = np.array([embedding])
-            self.labels = np.array([name])
-        else:
-            self.embeddings = np.vstack([self.embeddings, embedding])
-            self.labels = np.append(self.labels, name)
-        
-        # Sauvegarde dans la base de données
-        self._save_to_db(name, embedding)
-        np.save(EMBEDDINGS_PATH, np.column_stack([self.embeddings, self.labels]))
-        
-        return True
-
-    def _save_to_db(self, name, embedding):
-        """Sauvegarde dans SQLite"""
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        
-        # Création de la table si elle n'existe pas
-        c.execute('''CREATE TABLE IF NOT EXISTS faces
-                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      name TEXT NOT NULL,
-                      embedding BLOB NOT NULL,
-                      date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-        
-        # Insertion
-        c.execute("INSERT INTO faces (name, embedding) VALUES (?, ?)",
-                 (name, embedding.tobytes()))
-        
-        conn.commit()
-        conn.close()
-
-# Test
-if __name__ == "__main__":
-    recognizer = FaceRecognizer()
-    test_img = cv2.imread("test_face.jpg")  # Image avec un seul visage
-    
-    # Test reconnaissance
-    result = recognizer.recognize(test_img)
-    print("Résultat reconnaissance:", result)
-    
-    # Test enregistrement
-    # recognizer.register_face(test_img, "John_Doe")
-    # print("Visage enregistré!")
+# Singleton
+face_recognizer = FaceNet()

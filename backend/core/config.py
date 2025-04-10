@@ -4,10 +4,10 @@ import os
 
 class Settings(BaseSettings):
     app_name: str = "YOLO FaceGuard API"
-    api_prefix: str = "/api/v1"
+    api_prefix: str = "/api"
     database_url: str = "sqlite:///database/faces.db"
     embeddings_dir: str = "database/embeddings"
-    
+    models_dir="ml_models/"
     def __init__(self):
         super().__init__()
         os.makedirs(self.embeddings_dir, exist_ok=True)
