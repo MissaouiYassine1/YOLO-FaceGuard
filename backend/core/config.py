@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///database/faces.db"
     embeddings_dir: str = "database/embeddings"
     models_dir="ml_models/"
+    max_upload_size: int = 10_000_000  # 10MB max par image
+    allowed_content_types: list = ["image/jpeg", "image/png"]
     def __init__(self):
         super().__init__()
         os.makedirs(self.embeddings_dir, exist_ok=True)
