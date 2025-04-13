@@ -17,9 +17,11 @@ import '../assets/styles/register.scss';
 const API_CONFIG = {
   BASE_URL: 'http://localhost:8000',
   ENDPOINTS: {
-    REGISTER: '/api/v1/register',
-    DETECT: '/api/v1/detect'
-  }
+    DETECT: '/api/detect',
+    RECOGNIZE: '/api/recognize',
+    REGISTER: '/api/register'  
+  },
+  TIMEOUT: 10000 // 10 seconds
 };
 
 document.title = "YOLO FaceGuard - Enregistrement";
