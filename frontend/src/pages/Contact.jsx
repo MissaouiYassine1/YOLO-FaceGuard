@@ -43,7 +43,6 @@ const Contact = () => {
                 <div className="member-info">
                     <h3>Maryem Kbayer</h3>
                     <p className="member-position">Spécialiste UX/UI </p>
-                    <br></br>
                     {/*<p className="member-description">Design d'interfaces et expérience utilisateur.</p>*/}
                     <a href="mailto:mariem.kbaier@enis.tn" className="member-email">mariem.kbaier@enis.tn</a>
                     {/*<div className="member-social">

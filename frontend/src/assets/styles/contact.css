@@ -1,281 +1,393 @@
 :root {
-    --primary-blue: #4ac7ef;
-    --secondary-blue: #2a9ec7;
-    --light-bg: #f3fbfd;
-    --dark-bg: #030810;
-    --darker-bg: #02070d;
-    --border-color: #1a2a3a;
-    --success-green: #3ab795;
-    --error-red: #e74c3c;
-    --warning-orange: #f39c12;
-    --text-color: #e0f2fe;
-    --card-bg: #0a1420;
-    --highlight: rgba(74, 199, 239, 0.2);
-  }
-  
-  /* Reset et styles de base */
-  body {
+    /* Couleurs principales */
+    --color-primary: #2563eb;
+    --color-primary-light: #3b82f6;
+    --color-primary-dark: #1d4ed8;
+    
+    /* Couleurs secondaires */
+    --color-secondary: #7c3aed;
+    --color-secondary-light: #8b5cf6;
+    
+    /* Arrière-plans */
+    --bg-dark: #0f172a;
+    --bg-darker: #020617;
+    --bg-card: rgba(15, 23, 42, 0.7);
+    
+    /* Texte */
+    --text-light: #f8fafc;
+    --text-muted: #94a3b8;
+    
+    /* Bordures */
+    --border-radius: 12px;
+    --border-color: rgba(255, 255, 255, 0.1);
+}
+
+body {
     font-family: 'Poppins', sans-serif;
     margin: 0;
     padding: 0;
-    background-color: var(--dark-bg);
-    color: var(--text-color);
-    line-height: 1.6;
-  }
-  
-  .page {
+    background: linear-gradient(135deg, var(--bg-darker), var(--bg-dark));
+    color: var(--text-light);
+    text-align: center;
     min-height: 100vh;
-    padding: 2rem 0;
-    box-sizing: border-box;
-  }
-  
-  /* Styles pour la page Contact */
-  .contact-page {
-    background: linear-gradient(135deg, var(--darker-bg), var(--dark-bg));
+}
+
+h1 {
+    background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: 2.8em;
+    margin: 30px 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 800;
+}
+
+.team-container {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 40px;
+    padding: 30px 5%;
+    flex-wrap: wrap;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+.member-position{
+    margin-top: 10%;
+    margin-bottom: 10%;
+}
+.member-card {
     display: flex;
     flex-direction: column;
     align-items: center;
-  }
-  
-  .team-title {
-    font-size: 2.5rem;
-    margin: 2rem 0 3rem;
-    text-align: center;
-    position: relative;
-    color: var(--text-color);
-    font-weight: 700;
-    letter-spacing: 1px;
-  }
-  
-  .team-title::after {
-    content: '';
-    position: absolute;
-    bottom: -15px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
-    border-radius: 2px;
-    transition: width 0.3s ease;
-  }
-  
-  .team-title:hover::after {
-    width: 120px;
-  }
-  
-  /* Conteneur de l'équipe */
-  .team-container {
-    display: flex;
-    justify-content: center;
-    gap: 2.5rem;
-    max-width: 1200px;
-    padding: 0 1.5rem;
-    margin: 0 auto;
-  }
-  
-  /* Carte de membre */
-  .member-card {
-    background: var(--card-bg);
-    border-radius: 15px;
-    padding: 2rem;
-    width: 100%;
-    max-width: 320px;
+    background: var(--bg-card);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    width: 300px;
     text-align: center;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     position: relative;
     overflow: hidden;
-  }
-  
-  .member-card::before {
+}
+
+.member-card::before {
     content: '';
     position: absolute;
     top: -50%;
     left: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(circle, rgba(74, 199, 239, 0.1) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
     transform: rotate(30deg);
     transition: all 0.6s ease;
     opacity: 0;
-  }
-  
-  .member-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 12px 32px rgba(74, 199, 239, 0.15);
-    border-color: rgba(74, 199, 239, 0.3);
-  }
-  
-  .member-card:hover::before {
+}
+
+.member-card:hover {
+    transform: translateY(-10px) scale(1.03);
+    box-shadow: 0 12px 40px rgba(37, 99, 235, 0.3);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.member-card:hover::before {
     opacity: 1;
     transform: rotate(0deg);
-  }
-  
-  /* Photo de membre */
-  .member-photo {
-    width: 150px;
-    height: 150px;
+}
+
+.member-card img {
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
     object-fit: cover;
     border: 4px solid transparent;
-    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue)) border-box;
-    margin: 0 auto 1.5rem;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    box-shadow: 0 4px 20px rgba(74, 199, 239, 0.2);
-  }
-  
-  .member-card:hover .member-photo {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)) border-box;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.member-card:hover img {
     transform: scale(1.05);
-    box-shadow: 0 6px 25px rgba(74, 199, 239, 0.3);
-  }
-  
-  /* Informations du membre */
-  .member-info {
-    position: relative;
-    z-index: 1;
-  }
-  
-  .member-info h3 {
-    font-size: 1.5rem;
-    margin: 0 0 0.5rem;
-    color: var(--text-color);
+    box-shadow: 0 6px 25px rgba(37, 99, 235, 0.4);
+}
+
+.member-card h3 {
+    margin: 15px 0 8px;
+    color: var(--text-light);
+    font-size: 1.5em;
     font-weight: 600;
-  }
-  
-  .member-position {
-    color: var(--primary-blue);
-    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+}
+
+.member-card .position {
+    font-size: 0.9em;
+    color: var(--color-primary-light);
     font-weight: 500;
-    margin-bottom: 1rem;
-    display: block;
+    margin-bottom: 5px;
     text-transform: uppercase;
     letter-spacing: 1px;
-  }
-  
-  .member-description {
-    color: var(--text-color);
-    opacity: 0.9;
-    font-size: 0.95rem;
-    margin-bottom: 1.5rem;
+}
+
+.member-card .description {
+    font-size: 0.95em;
+    color: var(--text-muted);
     line-height: 1.6;
-  }
-  
-  /* Styles des liens */
-  .member-email {
+    margin: 15px 0;
+}
+
+.member-card .social-links {
+    display: flex;
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.member-card .social-links a {
+    color: var(--text-muted);
+    font-size: 1.2em;
+    transition: all 0.3s ease;
+}
+
+.member-card .social-links a:hover {
+    color: var(--color-primary-light);
+    transform: translateY(-3px);
+}
+
+.member-card button {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.member-card button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--color-primary-dark), var(--color-secondary-light));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.member-card button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(37, 99, 235, 0.4);
+}
+
+.member-card button:hover::before {
+    opacity: 1;
+}
+
+/* Animation d'entrée pour les cartes */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.member-card {
+    animation: fadeInUp 0.6s ease forwards;
+    opacity: 0;
+}
+
+.member-card:nth-child(1) { animation-delay: 0.1s; }
+.member-card:nth-child(2) { animation-delay: 0.2s; }
+.member-card:nth-child(3) { animation-delay: 0.3s; }
+.member-card:nth-child(4) { animation-delay: 0.4s; }
+.member-card:nth-child(5) { animation-delay: 0.5s; }
+.member-card:nth-child(6) { animation-delay: 0.6s; }
+
+/* Liens standards */
+a {
     color: var(--primary-blue);
     text-decoration: none;
-    font-weight: 500;
-    display: inline-block;
-    margin-bottom: 1rem;
     position: relative;
     transition: color 0.3s ease;
   }
   
-  .member-email::after {
+  a:hover {
+    color: var(--secondary-blue);
+  }
+  
+  /* Effet souligné animé */
+  a.link-underline::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background-color: var(--primary-blue);
+    transition: width 0.3s ease;
+  }
+  
+  a.link-underline:hover::after {
+    width: 100%;
+  }
+  
+  /* Effet pointillé interactif */
+  a.link-dotted::after {
     content: '';
     position: absolute;
     bottom: -3px;
     left: 0;
-    width: 0;
-    height: 1px;
-    background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
-    transition: width 0.4s ease;
-  }
-  
-  .member-email:hover {
-    color: var(--secondary-blue);
-  }
-  
-  .member-email:hover::after {
     width: 100%;
+    height: 1px;
+    background: transparent;
+    background-image: linear-gradient(90deg, var(--primary-blue), var(--primary-blue) 50%, transparent 50%, transparent 100%);
+    background-size: 4px 1px;
+    transition: all 0.3s ease;
+    opacity: 0;
   }
   
-  /* Liens sociaux */
-  .member-social {
-    display: flex;
-    justify-content: center;
-    gap: 1.5rem;
-    margin-top: 1.5rem;
+  a.link-dotted:hover::after {
+    opacity: 1;
+    bottom: -2px;
   }
   
-  .social-link {
-    color: var(--text-color);
-    text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 500;
-    position: relative;
-    padding: 0.2rem 0;
-    transition: color 0.3s ease;
-  }
-  
-  .social-link::after {
+  /* Effet surlignage */
+  a.link-highlight::after {
     content: '';
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 1px;
-    background-color: var(--primary-blue);
+    height: 20%;
+    background-color: var(--highlight);
+    z-index: -1;
+    transition: height 0.3s ease, background-color 0.3s ease;
+  }
+  
+  a.link-highlight:hover::after {
+    height: 40%;
+    background-color: rgba(74, 199, 239, 0.3);
+  }
+  
+  /* Effet bulle (pour les boutons-links) */
+  a.link-bubble::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    padding: 0.3em;
+    border: 1px solid var(--primary-blue);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+    transition: all 0.4s ease;
+    pointer-events: none;
+  }
+  
+  a.link-bubble:hover::after {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  
+  /* Effet icône flèche (pour les liens externes) */
+  a.link-external::after {
+    content: '→';
+    margin-left: 4px;
+    display: inline-block;
+    transition: transform 0.2s ease;
+  }
+  
+  a.link-external:hover::after {
+    transform: translateX(3px);
+  }
+  
+  /* Effet gradient underline */
+  a.link-gradient::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
     transform: scaleX(0);
     transform-origin: right;
-    transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transition: transform 0.4s ease;
   }
   
-  .social-link:hover {
-    color: var(--primary-blue);
-  }
-  
-  .social-link:hover::after {
+  a.link-gradient:hover::after {
     transform: scaleX(1);
     transform-origin: left;
   }
   
-  /* Animations */
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+  /* Style pour les liens dans les cartes */
+  .member-card a::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background-color: var(--secondary-blue);
+    transition: width 0.3s ease;
   }
   
-  .member-card {
-    animation: fadeIn 0.6s ease forwards;
+  .member-card a:hover::after {
+    width: 100%;
+  }
+  
+  /* Style pour les liens de navigation */
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    background-color: var(--primary-blue);
+    border-radius: 50%;
     opacity: 0;
+    transition: all 0.3s ease;
   }
   
-  .member-card:nth-child(1) { animation-delay: 0.1s; }
-  .member-card:nth-child(2) { animation-delay: 0.2s; }
-  .member-card:nth-child(3) { animation-delay: 0.3s; }
+  .nav-link:hover::after {
+    opacity: 1;
+    bottom: -8px;
+  }
   
-  /* Responsive */
-  @media (max-width: 768px) {
+/* Responsive */
+@media (max-width: 768px) {
     .team-container {
-      flex-direction: column;
-      align-items: center;
-      gap: 2rem;
+        padding: 20px;
+        gap: 25px;
     }
     
     .member-card {
-      max-width: 90%;
+        width: 100%;
+        max-width: 350px;
     }
     
-    .team-title {
-      font-size: 2rem;
+    h1 {
+        font-size: 2.2em;
     }
-  }
-  
-  @media (max-width: 480px) {
-    .member-card {
-      padding: 1.5rem;
-    }
-    
-    .member-photo {
-      width: 120px;
-      height: 120px;
-    margin-bottom: 1rem;
-    }
-    
-    .member-info h3 {
-      font-size: 1.3rem;
-    }
-  }
+}
