@@ -128,8 +128,8 @@ $card-bg: #0a1420;
   /* Planet with Complete Craters */
   .planet {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 37.5%;
+    left: 40%;
     transform: translate(-50%, -50%);
     width: clamp(50px, 10vw, 80px);
     height: clamp(50px, 10vw, 80px);
