@@ -1,0 +1,27 @@
+# backend/requirements.txt
+
+# Core
+fastapi
+uvicorn
+python-multipart
+
+# Computer Vision
+opencv-python
+Pillow
+
+# Machine Learning
+numpy
+scikit-learn
+
+# Deep Learning
+torch
+torchvision
+tensorflow
+keras
+
+# Modèles spécifiques
+ultralytics  # Pour YOLOv8
+keras-facenet  # Pour FaceNet
+
+# Optimisation
+onnxruntime  # Optionnel pour l'accélération

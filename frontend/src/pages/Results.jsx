@@ -211,105 +211,32 @@ const Results = () => {
 
   // Détection avec gestion d'erreur et timeout
   const sendFrameToBackend = async () => {
-    if (!canvasRef.current || !videoRef.current || isProcessing) return;
-
-    updateState({ isProcessing: true });
-    let blobUrl;
-
     try {
+      // 1. Capture du frame
       const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-
-      // Conversion en blob
-      const blob = await new Promise((resolve) => {
-        canvas.toBlob(resolve, 'image/jpeg', 0.9);
-      });
-      blobUrl = URL.createObjectURL(blob);
-
-      const formData = new FormData();
-      formData.append('file', blob, 'frame.jpg');
-
-      // Configuration de la requête avec timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
-
-      // Détection des visages
-      const detectionResponse = await fetch(
-        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.DETECT}`,
-        {
-          method: 'POST',
-          body: formData,
-          signal: controller.signal
-        }
+      const blob = await new Promise(resolve => 
+        canvas.toBlob(resolve, 'image/jpeg', 0.8)
       );
-      clearTimeout(timeoutId);
-
-      if (!detectionResponse.ok) throw new Error('Détection échouée');
-      const detectionData = await detectionResponse.json();
-
-      // Reconnaissance faciale pour chaque visage
-      const recognitionPromises = detectionData.faces.map(async (box) => {
-        const faceCanvas = document.createElement('canvas');
-        faceCanvas.width = box[2] - box[0];
-        faceCanvas.height = box[3] - box[1];
-        const faceCtx = faceCanvas.getContext('2d');
-        faceCtx.drawImage(
-          canvas, 
-          box[0], box[1], faceCanvas.width, faceCanvas.height,
-          0, 0, faceCanvas.width, faceCanvas.height
-        );
-
-        const faceBlob = await new Promise(resolve => 
-          faceCanvas.toBlob(resolve, 'image/jpeg'));
-        
-        const faceFormData = new FormData();
-        faceFormData.append('file', faceBlob, 'face.jpg');
-
-        const recognitionResponse = await fetch(
-          `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.RECOGNIZE}`,
-          {
-            method: 'POST',
-            body: faceFormData,
-            signal: controller.signal
-          }
-        );
-        return recognitionResponse.json();
-      });
-
-      const recognitionResults = await Promise.all(recognitionPromises);
-
-      // Formatage des résultats
-      const newDetections = detectionData.faces.map((box, i) => ({
-        id: `face-${Date.now()}-${i}`,
-        box: {
-          x: box[0],
-          y: box[1],
-          width: box[2] - box[0],
-          height: box[3] - box[1]
-        },
-        identity: {
-          name: recognitionResults[i]?.face_id ? `Personne ${recognitionResults[i].face_id}` : 'Inconnu',
-          confidence: recognitionResults[i]?.confidence || 0
-        },
-        timestamp: Date.now()
-      }));
-
-      updateState(prev => ({
-        detections: [...prev.detections, ...newDetections].slice(-20),
-        lastDetectionTime: new Date().toLocaleTimeString(),
-        frozenDetectionTime: !isDetecting ? new Date().toLocaleTimeString() : prev.frozenDetectionTime
-      }));
-
-    } catch (error) {
-      console.error('Erreur API:', error);
+  
+      // 2. Détection YOLO
+      const detection = await apiClient.detectFaces(blob);
+      if (!detection?.faces) return;
+  
+      // 3. Mise à jour de l'état
       updateState({
-        apiError: `Erreur: ${error.name === 'AbortError' ? 'Délai dépassé' : error.message}`
+        detections: [
+          ...detections,
+          ...detection.faces.map(face => ({
+            id: crypto.randomUUID(),
+            box: face.bbox,
+            identity: face.identity || { name: "Inconnu", confidence: 0 }
+          }))
+        ],
+        lastDetectionTime: new Date().toLocaleTimeString()
       });
-      setTimeout(() => updateState({ apiError: null }), 5000);
-    } finally {
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-      updateState({ isProcessing: false });
+  
+    } catch (err) {
+      updateState({ apiError: `Erreur détection: ${err.message}` });
     }
   };
 

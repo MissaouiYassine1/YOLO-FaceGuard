@@ -12,6 +12,7 @@ import {
   IoWarning as WarningIcon
 } from 'react-icons/io5';
 import '../assets/styles/register.scss';
+import apiClient from '../api'
 
 // Configuration API
 const API_CONFIG = {
@@ -158,42 +159,25 @@ const Register = () => {
 
   // Soumettre les images au backend
   const submitRegistration = async () => {
-    if (!name.trim() || capturedImages.length === 0) {
-      setError("Veuillez saisir un nom et capturer au moins une image");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
     try {
-      const formData = new FormData();
-      formData.append('name', name);
+      setLoading(true);
       
-      // Ajouter toutes les images capturées
-      capturedImages.forEach((img, index) => {
-        formData.append(`images`, img.blob, `face_${index}.jpg`);
-      });
-
-      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REGISTER}`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Erreur lors de l'enregistrement");
+      const result = await apiClient.registerFace(
+        name,
+        capturedImages.map(img => img.blob)
+      );
+  
+      if (result.success) {
+        setSuccess(true);
+        setStep(3);
       }
-
-      setSuccess(true);
-      setStep(3);
     } catch (err) {
-      setError(err.message || "Erreur lors de l'enregistrement. Veuillez réessayer.");
-      console.error("Erreur d'enregistrement:", err);
+      setError(`Échec enregistrement: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
+  
 
   // Gérer les fichiers uploadés
   const handleFileUpload = async (e) => {
