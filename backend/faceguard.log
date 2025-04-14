@@ -1,0 +1,10 @@
+[2025-04-14 03:38:40,402] ERROR: Model loading failed: [Errno 2] No such file or directory: 'models\\yolov8n-face.pt'
+[2025-04-14 03:38:52,352] ERROR: Model loading failed: [Errno 2] No such file or directory: 'models\\yolov8n-face.pt'
+[2025-04-14 03:39:34,339] INFO: Models loaded successfully on device: cpu
+[2025-04-14 03:39:34,339] INFO: Models loaded successfully on device: cpu
+[2025-04-14 03:39:34,339] INFO: Models loaded successfully on device: cpu
+[2025-04-14 03:41:46,792] INFO: Models loaded successfully on device: cpu
+[2025-04-14 03:41:46,792] INFO: Models loaded successfully on device: cpu
+[2025-04-14 03:41:46,792] INFO: Models loaded successfully on device: cpu
+[2025-04-14 03:46:38,359] INFO: Models loaded successfully on device: cpu
+[2025-04-14 03:47:22,231] INFO: Models loaded successfully on device: cpu

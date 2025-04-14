@@ -1,56 +1,138 @@
 // frontend/src/api.js
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
+// Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const MAX_RETRIES = 3;
+const TIMEOUT = 30000; // 30 seconds
 
+// Create axios instance
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 secondes
+  timeout: TIMEOUT,
   headers: {
-    'Content-Type': 'multipart/form-data',
-  },
+    'Accept': 'application/json',
+    'Cache-Control': 'no-cache'
+  }
 });
 
-// Intercepteur pour la gestion globale des erreurs
+// Request interceptor
+apiClient.interceptors.request.use(config => {
+  // Add timestamp to avoid caching
+  if (config.method === 'get') {
+    config.params = {
+      ...config.params,
+      _t: Date.now()
+    };
+  }
+  return config;
+}, error => {
+  return Promise.reject(error);
+});
+
+// Response interceptor
 apiClient.interceptors.response.use(
-  (response) => response.data,
-  (error) => {
+  response => {
+    // Log performance metrics
+    if (response.headers['x-process-time']) {
+      console.debug(`API ${response.config.url} took ${response.headers['x-process-time']}ms`);
+    }
+    return response.data;
+  },
+  async error => {
+    const originalRequest = error.config;
+    
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED') {
+      toast.error('Request timeout. Please try again');
+      return Promise.reject('Request timeout');
+    }
+    
+    // Handle server errors with retry
+    if (error.response?.status >= 500 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      // Exponential backoff
+      const delay = Math.pow(2, originalRequest._retryCount || 1) * 1000;
+      await new Promise(res => setTimeout(res, delay));
+      
+      return apiClient(originalRequest);
+    }
+    
+    // Extract error message
     const errorMsg = error.response?.data?.detail || 
                     error.message || 
-                    'Erreur inconnue';
-    console.error('API Error:', errorMsg);
+                    'Network error';
+    
+    // Show user-friendly messages
+    const friendlyErrors = {
+      413: 'Image too large (max 5MB)',
+      400: 'Invalid image format',
+      404: 'API endpoint not found'
+    };
+    
+    toast.error(friendlyErrors[error.response?.status] || errorMsg);
     return Promise.reject(errorMsg);
   }
 );
 
-// Fonctions API spécifiques
+// API Methods
 export default {
-  // Détection de visages
-  detectFaces(imageBlob) {
+  // Face detection
+  async detectFaces(imageBlob) {
     const formData = new FormData();
-    formData.append('image', imageBlob, 'face.jpg');
-    return apiClient.post('/detect', formData);
+    formData.append('file', imageBlob, `detect-${Date.now()}.jpg`);
+    
+    return apiClient.post('/api/detect', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   },
 
-  // Enregistrement de visage
-  registerFace(name, faceImages) {
+  // Face recognition
+  async recognizeFace(imageBlob) {
+    const formData = new FormData();
+    formData.append('file', imageBlob, `recognize-${Date.now()}.jpg`);
+    
+    return apiClient.post('/api/recognize', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+
+  // Register new face
+  async registerFace(name, imageBlobs) {
     const formData = new FormData();
     formData.append('name', name);
-    faceImages.forEach((img, i) => {
-      formData.append(`faces`, img, `face_${i}.jpg`);
+    
+    imageBlobs.forEach((blob, i) => {
+      formData.append('files', blob, `face-${Date.now()}-${i}.jpg`);
     });
-    return apiClient.post('/register', formData);
+    
+    return apiClient.post('/api/register', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   },
 
-  // Reconnaissance faciale
-  recognizeFace(faceBlob) {
-    const formData = new FormData();
-    formData.append('face', faceBlob, 'verify.jpg');
-    return apiClient.post('/recognize', formData);
-  },
-
-  // Liste des visages enregistrés
+  // List registered faces
   listFaces() {
-    return apiClient.get('/faces');
+    return apiClient.get('/api/faces');
+  },
+
+  // Health check
+  checkHealth() {
+    return apiClient.get('/api/health');
+  },
+
+  // Utility to convert canvas to blob
+  canvasToBlob(canvas, quality = 0.9) {
+    return new Promise(resolve => {
+      canvas.toBlob(resolve, 'image/jpeg', quality);
+    });
   }
 };

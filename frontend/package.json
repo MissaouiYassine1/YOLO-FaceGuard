@@ -2858,7 +2858,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "vite",
-    "start-backend": "cd ../backend && python -m uvicorn main:app --reload --port 8000",
+    "start-backend": "cd ../backend && python -m uvicorn app:app --reload --port 8000",
     "start-fullstack": "concurrently -n \"BACKEND,FRONTEND\" -c \"bgBlue.bold,bgGreen.bold\" \"npm run start-backend\" \"npm start\"",
     "install-deps": "concurrently \"npm:install-backend\" \"npm:install-frontend\"",
     "install-backend": "cd backend && pip install -r requirements.txt",

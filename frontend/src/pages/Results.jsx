@@ -21,6 +21,7 @@ import {
   IoWarning as WarningIcon,
   IoCameraReverse as SwitchCameraIcon
 } from 'react-icons/io5';
+import apiClient from '../api'
 
 // Configuration API
 const API_CONFIG = {
@@ -532,17 +533,7 @@ const Results = () => {
                   ) : (
                     <SearchCircleIcon size={18} className="icon" />
                   )}
-                  {isDetecting ? 'Arrêter détection' : 'Détection auto'}
-                </button>
-                
-                <button 
-                  onClick={sendFrameToBackend} 
-                  className="control-btn detect-btn"
-                  disabled={cameraState !== 'running' || isProcessing}
-                  aria-label="Détection manuelle"
-                >
-                  <SearchIcon size={18} className="icon" />
-                  Détection manuelle
+                  {isDetecting ? 'Arrêter détection' : 'Détection'}
                 </button>
               </div>
               
