@@ -171,6 +171,7 @@ def extract_embeddings(image: np.ndarray, boxes: List[List[int]]) -> torch.Tenso
 # API Endpoints
 @app.post("/api/detect", response_model=DetectionResult)
 async def detect_faces(file: UploadFile = File(...)):
+    print("Start detection...")
     """Endpoint for face detection"""
     start_time = time.time()
     
@@ -206,7 +207,7 @@ async def detect_faces(file: UploadFile = File(...)):
                 ))
         
         processing_time = round(time.time() - start_time, 3)
-        
+        print("Detection completed!")
         return DetectionResult(
             faces=faces,
             is_low_light=False,  # Can implement actual check

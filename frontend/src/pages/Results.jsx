@@ -21,17 +21,6 @@ import {
   IoWarning as WarningIcon,
   IoCameraReverse as SwitchCameraIcon
 } from 'react-icons/io5';
-import apiClient from '../api'
-
-// Configuration API
-const API_CONFIG = {
-  BASE_URL: 'http://localhost:8000',
-  ENDPOINTS: {
-    DETECT: '/api/detect',
-    RECOGNIZE: '/api/recognize'
-  },
-  TIMEOUT: 10000 // 10 seconds
-};
 
 document.title = "YOLO FaceGuard - Résultats";
 
@@ -49,7 +38,7 @@ const Results = () => {
     stream: null,
     activeCamera: 'user', // 'user' | 'environment'
     
-    // Detection
+    // Detection (simulée)
     detections: [],
     isDetecting: false,
     fps: 0,
@@ -210,68 +199,42 @@ const Results = () => {
     });
   };
 
-  // Détection avec gestion d'erreur et timeout
-  const sendFrameToBackend = async () => {
-    try {
-      // 1. Capture du frame
-      const canvas = canvasRef.current;
-      const blob = await new Promise(resolve => 
-        canvas.toBlob(resolve, 'image/jpeg', 0.8)
-      );
-  
-      // 2. Détection YOLO
-      const detection = await apiClient.detectFaces(blob);
-      if (!detection?.faces) return;
-  
-      // 3. Mise à jour de l'état
-      updateState({
-        detections: [
-          ...detections,
-          ...detection.faces.map(face => ({
-            id: crypto.randomUUID(),
-            box: face.bbox,
-            identity: face.identity || { name: "Inconnu", confidence: 0 }
-          }))
-        ],
-        lastDetectionTime: new Date().toLocaleTimeString()
-      });
-  
-    } catch (err) {
-      updateState({ apiError: `Erreur détection: ${err.message}` });
-    }
-  };
+  // Simuler une détection (pour démo UI)
+  const simulateDetection = useCallback(() => {
+    if (!canvasRef.current || !isDetecting || cameraState !== 'running') return;
 
-  // Boucle de détection optimisée
-  useEffect(() => {
-    let animationId;
-    let lastTimestamp = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = performance.now();
-
-    const detectionLoop = (timestamp) => {
-      if (isDetecting && cameraState === 'running') {
-        // Limiter à ~15 FPS pour réduire la charge CPU
-        if (timestamp - lastTimestamp >= 1000 / 15) {
-          sendFrameToBackend();
-          lastTimestamp = timestamp;
-          frameCount++;
-        }
-
-        // Mettre à jour les FPS toutes les secondes
-        if (timestamp - lastFpsUpdate >= 1000) {
-          updateState({ fps: Math.round((frameCount * 1000) / (timestamp - lastFpsUpdate)) });
-          frameCount = 0;
-          lastFpsUpdate = timestamp;
-        }
-      }
-      animationId = requestAnimationFrame(detectionLoop);
+    const newDetection = {
+      id: crypto.randomUUID(),
+      box: {
+        x: Math.random() * (canvasRef.current.width - 100),
+        y: Math.random() * (canvasRef.current.height - 100),
+        width: 80 + Math.random() * 50,
+        height: 80 + Math.random() * 50
+      },
+      identity: {
+        name: Math.random() > 0.5 ? "Utilisateur" : "Inconnu",
+        confidence: 0.7 + Math.random() * 0.3
+      },
+      timestamp: new Date().toISOString()
     };
 
-    animationId = requestAnimationFrame(detectionLoop);
-    return () => cancelAnimationFrame(animationId);
+    updateState(prev => ({
+      detections: [...prev.detections, newDetection],
+      lastDetectionTime: new Date().toLocaleTimeString(),
+      fps: Math.floor(10 + Math.random() * 10) // FPS simulés
+    }));
   }, [isDetecting, cameraState]);
 
-  // Dessin des détections
+  // Boucle de détection simulée
+  useEffect(() => {
+    let intervalId;
+    if (isDetecting && cameraState === 'running') {
+      intervalId = setInterval(simulateDetection, 1000);
+    }
+    return () => clearInterval(intervalId);
+  }, [isDetecting, cameraState, simulateDetection]);
+
+  // Dessin des détections simulées
   const drawDetections = useCallback(() => {
     if (!canvasRef.current || detections.length === 0) return;
 
@@ -347,8 +310,8 @@ const Results = () => {
     };
   }, [stream]);
 
-  // Exporter les détections
-  const exportDetections = (format = 'json') => {
+  // Exporter les détections (simulé)
+  const exportDetections = () => {
     const data = {
       timestamp: new Date().toISOString(),
       detections: detections,
@@ -358,15 +321,13 @@ const Results = () => {
       }
     };
 
-    if (format === 'json') {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -404,12 +365,11 @@ const Results = () => {
       {showDetectionInfo && (
         <div className="info-panel">
           <div className="info-content">
-            <h3>Informations sur la détection</h3>
+            <h3>Mode Démo</h3>
             <ul>
-              <li><strong>Technologie :</strong> YOLO FaceGuard (version 1.0)</li>
-              <li><strong>Précision :</strong> 92-96% selon les conditions</li>
-              <li><strong>Latence :</strong> ~120ms par détection</li>
-              <li><strong>Résolution :</strong> 1280x720 recommandée</li>
+              <li><strong>Fonctionnalités réelles désactivées</strong></li>
+              <li><strong>Détections :</strong> Données simulées aléatoires</li>
+              <li><strong>Caméra :</strong> Fonctionnelle (navigateur uniquement)</li>
             </ul>
             <button 
               onClick={() => updateState({ showDetectionInfo: false })}
@@ -540,7 +500,7 @@ const Results = () => {
               <div className="control-group">
                 {detections.length > 0 && (
                   <button 
-                    onClick={() => exportDetections('json')} 
+                    onClick={exportDetections} 
                     className="control-btn save-btn"
                     aria-label="Exporter les détections"
                   >
@@ -593,7 +553,7 @@ const Results = () => {
                   Effacer tout
                 </button>
                 <button 
-                  onClick={() => exportDetections('json')} 
+                  onClick={exportDetections} 
                   className="action-btn save-btn"
                   aria-label="Exporter en JSON"
                 >
