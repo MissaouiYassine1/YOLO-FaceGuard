@@ -11,6 +11,7 @@ import {
   IoWarning as WarningIcon
 } from 'react-icons/io5';
 import '../assets/styles/register.scss';
+import { registerFace } from '../api';
 
 document.title = "YOLO FaceGuard - Enregistrement";
 
@@ -183,10 +184,20 @@ const Register = () => {
   // Simuler l'enregistrement
   const submitRegistration = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setSuccess(true);
-    setStep(3);
-    setLoading(false);
+    try {
+      const result = await registerFace(name, capturedImages);
+      
+      if (result.status === "success") {
+        setSuccess(true);
+        setStep(3);
+      } else {
+        setError(result.message || "Erreur lors de l'enregistrement");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Nettoyage
