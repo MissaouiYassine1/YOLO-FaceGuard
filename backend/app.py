@@ -55,6 +55,31 @@ face_db = init_face_db()
 def save_face_db():
     np.save(FACE_DB_PATH, face_db)
 
+# Fonction pour améliorer les images nocturnes
+def enhance_night_image(image):
+    # Convertir en LAB pour mieux travailler sur la luminosité
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    
+    # CLAHE (Contrast Limited Adaptive Histogram Equalization)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    l_enhanced = clahe.apply(l)
+    
+    # Fusionner les canaux et reconvertir en BGR
+    enhanced_lab = cv2.merge((l_enhanced, a, b))
+    enhanced_image = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
+    
+    # Réduction du bruit
+    denoised_image = cv2.fastNlMeansDenoisingColored(enhanced_image, None, 10, 10, 7, 21)
+    
+    return denoised_image
+
+# Fonction pour déterminer si une image est sombre
+def is_dark_image(image, threshold=30):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    avg_brightness = np.mean(gray)
+    return avg_brightness < threshold
+
 # Endpoint pour enregistrer un nouveau visage
 @app.post("/register-face")
 async def register_face(
@@ -145,6 +170,10 @@ async def detect_faces(file: UploadFile = File(...)):
         contents = await file.read()
         nparr = np.frombuffer(contents, np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        # Vérifier si l'image est sombre et appliquer l'amélioration si nécessaire
+        if is_dark_image(frame):
+            frame = enhance_night_image(frame)
 
         # Détection avec YOLOv8
         results = face_detector(frame, verbose=False)
