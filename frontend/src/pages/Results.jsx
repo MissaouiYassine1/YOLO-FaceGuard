@@ -38,7 +38,7 @@ const Results = () => {
     stream: null,
     activeCamera: 'user', // 'user' | 'environment'
     
-    // Detection (simulée)
+    // Detection
     detections: [],
     isDetecting: false,
     fps: 0,
@@ -58,7 +58,8 @@ const Results = () => {
     
     // System
     apiError: null,
-    isProcessing: false
+    isProcessing: false,
+    detectionCount: 0
   });
 
   // Destructuration de l'état
@@ -77,13 +78,124 @@ const Results = () => {
     showDetectionInfo,
     userSelectedSize,
     apiError,
-    isProcessing
+    isProcessing,
+    detectionCount
   } = state;
 
   // Mise à jour optimisée de l'état
   const updateState = (newState) => {
     setState(prev => ({ ...prev, ...newState }));
   };
+
+  // Fonction pour envoyer le frame à l'API
+  const detectFaces = async (imageBlob) => {
+    const formData = new FormData();
+    formData.append('file', imageBlob, 'frame.jpg');
+
+    const response = await fetch('http://localhost:8000/detect', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.blob();
+  };
+
+  // Traitement du frame vidéo
+  const processFrame = useCallback(async () => {
+    if (!videoRef.current || !isDetecting || cameraState !== 'running') return;
+
+    try {
+      // Capturer le frame
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(videoRef.current, 0, 0);
+      
+      // Convertir en Blob
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob(resolve, 'image/jpeg', 0.85);
+      });
+
+      updateState({ isProcessing: true });
+      
+      // Envoyer à l'API
+      const detectionBlob = await detectFaces(blob);
+      const detectionUrl = URL.createObjectURL(detectionBlob);
+      
+      // Afficher le résultat
+      const img = new Image();
+      img.onload = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        
+        // Compter les détections (approximation basée sur les pixels verts)
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const greenPixels = countGreenRectangles(imageData.data, canvas.width, canvas.height);
+        
+        updateState(prev => ({
+          isProcessing: false,
+          lastDetectionTime: new Date().toLocaleTimeString(),
+          fps: calculateFPS(prev.lastDetectionTime),
+          detectionCount: greenPixels,
+          detections: [...prev.detections, {
+            id: Date.now(),
+            timestamp: new Date().toISOString(),
+            count: greenPixels
+          }].slice(-50) // Garder seulement les 50 dernières détections
+        }));
+        
+        URL.revokeObjectURL(detectionUrl);
+      };
+      img.src = detectionUrl;
+      
+    } catch (error) {
+      console.error('Detection failed:', error);
+      updateState({
+        apiError: "Erreur de détection - Vérifiez que le serveur est en marche",
+        isProcessing: false
+      });
+    }
+  }, [isDetecting, cameraState]);
+
+  // Calculer le FPS
+  const calculateFPS = (lastTime) => {
+    if (!lastTime) return 0;
+    const now = Date.now();
+    const last = new Date(lastTime).getTime();
+    return Math.floor(1000 / (now - last));
+  };
+
+  // Compter les rectangles verts (approximation)
+  const countGreenRectangles = (data, width, height) => {
+    // Cette méthode compte grossièrement les pixels verts significatifs
+    let greenAreas = 0;
+    const greenThreshold = 200;
+    
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i+1] > greenThreshold && data[i] < 50 && data[i+2] < 50) {
+        greenAreas++;
+      }
+    }
+    
+    // Approximation basée sur la taille moyenne d'un rectangle
+    return Math.floor(greenAreas / 500);
+  };
+
+  // Boucle de détection
+  useEffect(() => {
+    let intervalId;
+    if (isDetecting && cameraState === 'running') {
+      intervalId = setInterval(processFrame, 300); // ~3 FPS pour éviter la surcharge
+    }
+    return () => clearInterval(intervalId);
+  }, [isDetecting, cameraState, processFrame]);
 
   // Démarrer/arrêter la caméra
   const handleCamera = async (action) => {
@@ -136,9 +248,9 @@ const Results = () => {
         updateState({
           stream: null,
           cameraState: 'stopped',
-          detections: [],
           isDetecting: false,
-          fps: 0
+          fps: 0,
+          detections: []
         });
       }
       else if (action === 'pause' && stream) {
@@ -199,76 +311,25 @@ const Results = () => {
     });
   };
 
-  // Simuler une détection (pour démo UI)
-  const simulateDetection = useCallback(() => {
-    if (!canvasRef.current || !isDetecting || cameraState !== 'running') return;
-
-    const newDetection = {
-      id: crypto.randomUUID(),
-      box: {
-        x: Math.random() * (canvasRef.current.width - 100),
-        y: Math.random() * (canvasRef.current.height - 100),
-        width: 80 + Math.random() * 50,
-        height: 80 + Math.random() * 50
-      },
-      identity: {
-        name: Math.random() > 0.5 ? "Utilisateur" : "Inconnu",
-        confidence: 0.7 + Math.random() * 0.3
-      },
-      timestamp: new Date().toISOString()
+  // Exporter les détections
+  const exportDetections = () => {
+    const data = {
+      timestamp: new Date().toISOString(),
+      detections: detections,
+      videoResolution: {
+        width: videoRef.current?.videoWidth || 0,
+        height: videoRef.current?.videoHeight || 0
+      }
     };
 
-    updateState(prev => ({
-      detections: [...prev.detections, newDetection],
-      lastDetectionTime: new Date().toLocaleTimeString(),
-      fps: Math.floor(10 + Math.random() * 10) // FPS simulés
-    }));
-  }, [isDetecting, cameraState]);
-
-  // Boucle de détection simulée
-  useEffect(() => {
-    let intervalId;
-    if (isDetecting && cameraState === 'running') {
-      intervalId = setInterval(simulateDetection, 1000);
-    }
-    return () => clearInterval(intervalId);
-  }, [isDetecting, cameraState, simulateDetection]);
-
-  // Dessin des détections simulées
-  const drawDetections = useCallback(() => {
-    if (!canvasRef.current || detections.length === 0) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Dessiner seulement les 5 dernières détections
-    detections.slice(-5).forEach(det => {
-      const { x, y, width, height } = det.box;
-      const { name, confidence } = det.identity;
-
-      // Box de détection
-      ctx.strokeStyle = confidence > 0.8 ? '#4CD964' : '#FF3B30';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x, y, width, height);
-      
-      // Label
-      ctx.fillStyle = confidence > 0.8 ? 'rgba(76, 217, 100, 0.7)' : 'rgba(255, 59, 48, 0.7)';
-      ctx.fillRect(x, y - 20, 120, 20);
-      
-      ctx.fillStyle = 'white';
-      ctx.font = '12px Arial';
-      ctx.fillText(
-        `${name} (${Math.round(confidence * 100)}%)`,
-        x + 5,
-        y - 5
-      );
-    });
-  }, [detections]);
-
-  useEffect(() => {
-    if (detections.length > 0) drawDetections();
-  }, [detections, drawDetections]);
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Redimensionnement manuel
   useEffect(() => {
@@ -310,26 +371,6 @@ const Results = () => {
     };
   }, [stream]);
 
-  // Exporter les détections (simulé)
-  const exportDetections = () => {
-    const data = {
-      timestamp: new Date().toISOString(),
-      detections: detections,
-      videoResolution: {
-        width: videoRef.current?.videoWidth || 0,
-        height: videoRef.current?.videoHeight || 0
-      }
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `detections-${new Date().toISOString().slice(0, 19)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="results-page">
       {/* Message d'erreur */}
@@ -340,13 +381,13 @@ const Results = () => {
         </div>
       )}
 
-      {/* Indicateur de chargement */}
+      {/* Indicateur de chargement 
       {isProcessing && (
         <div className="processing-overlay" aria-live="polite">
           <div className="processing-spinner"></div>
           <p>Analyse en cours...</p>
         </div>
-      )}
+      )*/}
 
       <header className="page-header">
         <h2>
@@ -365,11 +406,12 @@ const Results = () => {
       {showDetectionInfo && (
         <div className="info-panel">
           <div className="info-content">
-            <h3>Mode Démo</h3>
+            <h3>Mode Réel</h3>
             <ul>
-              <li><strong>Fonctionnalités réelles désactivées</strong></li>
-              <li><strong>Détections :</strong> Données simulées aléatoires</li>
-              <li><strong>Caméra :</strong> Fonctionnelle (navigateur uniquement)</li>
+              <li><strong>Technologie :</strong> YOLOv8 Face Detection</li>
+              <li><strong>Résolution :</strong> 1280×720 (adaptative)</li>
+              <li><strong>Performance :</strong> ~3 FPS (limité intentionnellement)</li>
+              <li><strong>Détections :</strong> En temps réel via API FastAPI</li>
             </ul>
             <button 
               onClick={() => updateState({ showDetectionInfo: false })}
@@ -423,6 +465,12 @@ const Results = () => {
               <span className="last-detection">
                 <RefreshIcon size={14} className="icon" />
                 Dernière détection: {frozenDetectionTime || lastDetectionTime}
+              </span>
+            )}
+            {detectionCount > 0 && (
+              <span className="face-count">
+                <PersonIcon size={14} className="icon" />
+                Visages: {detectionCount}
               </span>
             )}
           </div>
@@ -538,7 +586,7 @@ const Results = () => {
         <div className="results-header">
           <h3>
             <PersonIcon size={20} className="header-icon" />
-            Visages Détectés ({detections.length})
+            Historique des Détections ({detections.length})
           </h3>
           
           <div className="results-actions">
@@ -567,34 +615,16 @@ const Results = () => {
         
         {detections.length > 0 ? (
           <div className="faces-grid">
-            {[...detections].reverse().map((face) => (
-              <div key={face.id} className="face-card">
-                <div className="face-info">
+            {[...detections].reverse().map((detection) => (
+              <div key={detection.id} className="detection-card">
+                <div className="detection-info">
                   <h4>
                     <PersonIcon size={14} className="icon" />
-                    {face.identity.name}
+                    Détection #{detections.length - detections.indexOf(detection)}
                   </h4>
-                  <p><strong>Confiance:</strong> {Math.round(face.identity.confidence * 100)}%</p>
-                  <p><strong>Position:</strong> {Math.round(face.box.x)}px, {Math.round(face.box.y)}px</p>
-                  <p><strong>Taille:</strong> {Math.round(face.box.width)}×{Math.round(face.box.height)}</p>
-                  <p className="timestamp">
-                    <small>{new Date(face.timestamp).toLocaleTimeString()}</small>
-                  </p>
-                </div>
-                <div className="face-preview-container">
-                  <div 
-                    className="face-preview" 
-                    style={{
-                      backgroundImage: `url(${canvasRef.current?.toDataURL() || ''})`,
-                      backgroundPosition: `-${Math.round(face.box.x)}px -${Math.round(face.box.y)}px`,
-                      width: `${Math.round(face.box.width)}px`,
-                      height: `${Math.round(face.box.height)}px`
-                    }}
-                    aria-label={`Aperçu du visage de ${face.identity.name}`}
-                  />
-                  <div className="face-preview-label">
-                    <ImageIcon size={12} /> Aperçu
-                  </div>
+                  <p><strong>Visages détectés:</strong> {detection.count || 0}</p>
+                  <p><strong>Heure:</strong> {new Date(detection.timestamp).toLocaleTimeString()}</p>
+                  <p><strong>Durée:</strong> {(Date.now() - new Date(detection.timestamp).getTime()) / 1000}s</p>
                 </div>
               </div>
             ))}
@@ -602,9 +632,9 @@ const Results = () => {
         ) : (
           <div className="empty-state">
             <PersonIcon size={48} className="empty-icon" />
-            <p>Aucune détection disponible</p>
+            <p>Aucune détection enregistrée</p>
             {cameraState === 'running' ? (
-              <p>Cliquez sur "Détecter" pour analyser le flux vidéo</p>
+              <p>Activez la détection pour commencer l'analyse</p>
             ) : (
               <p>Démarrez la caméra pour commencer</p>
             )}

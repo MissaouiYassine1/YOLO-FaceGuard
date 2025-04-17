@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 import numpy as np
 import cv2
 import os
@@ -8,6 +9,7 @@ from ultralytics import YOLO
 from facenet_pytorch import InceptionResnetV1
 from typing import List
 import shutil
+import io 
 
 # Initialisation de l'application FastAPI
 app = FastAPI(title="YOLO FaceGuard API")
@@ -136,6 +138,38 @@ async def register_face(
                 os.remove(img_path)
         raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
 
+@app.post("/detect")
+async def detect_faces(file: UploadFile = File(...)):
+    try:
+        # Lire l'image
+        contents = await file.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        # Détection avec YOLOv8
+        results = face_detector(frame, verbose=False)
+        
+        # Dessiner les bounding boxes
+        for result in results:
+            boxes = result.boxes.xyxy.cpu().numpy()
+            confidences = result.boxes.conf.cpu().numpy()
+            
+            for box, conf in zip(boxes, confidences):
+                x1, y1, x2, y2 = map(int, box)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(frame, f"Face: {conf:.2f}", (x1, y1-10), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+        # Encoder en JPEG
+        _, encoded_img = cv2.imencode('.jpg', frame)
+        return StreamingResponse(
+            io.BytesIO(encoded_img.tobytes()),
+            media_type="image/jpeg"
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 # Endpoint pour vérifier l'état de l'API
 @app.get("/")
 def read_root():
