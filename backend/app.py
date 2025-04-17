@@ -10,6 +10,7 @@ from facenet_pytorch import InceptionResnetV1
 from typing import List
 import shutil
 import io 
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Initialisation de l'application FastAPI
 app = FastAPI(title="YOLO FaceGuard API")
@@ -79,6 +80,33 @@ def is_dark_image(image, threshold=30):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     avg_brightness = np.mean(gray)
     return avg_brightness < threshold
+
+# Fonction de reconnaissance faciale
+def recognize_face(face_image, threshold=0.6):
+    try:
+        # Convertir et normaliser l'image du visage
+        face_rgb = cv2.cvtColor(face_image, cv2.COLOR_BGR2RGB)
+        face_tensor = torch.tensor(face_rgb).permute(2, 0, 1).float().unsqueeze(0) / 255.0
+        
+        # Générer l'embedding
+        query_embedding = face_recognizer(face_tensor).detach().numpy()
+        
+        # Comparaison avec la base de données
+        if len(face_db["embeddings"]) == 0:
+            return "Inconnu", 0.0
+        
+        similarities = cosine_similarity(query_embedding, np.vstack(face_db["embeddings"]))
+        max_idx = np.argmax(similarities)
+        max_similarity = similarities[0][max_idx]
+        
+        if max_similarity >= threshold:
+            return face_db["names"][max_idx], max_similarity
+        else:
+            return "Inconnu", max_similarity
+            
+    except Exception as e:
+        print(f"Erreur lors de la reconnaissance : {str(e)}")
+        return "Erreur", 0.0
 
 # Endpoint pour enregistrer un nouveau visage
 @app.post("/register-face")
@@ -178,16 +206,27 @@ async def detect_faces(file: UploadFile = File(...)):
         # Détection avec YOLOv8
         results = face_detector(frame, verbose=False)
         
-        # Dessiner les bounding boxes
+        # Traitement de chaque visage détecté
         for result in results:
             boxes = result.boxes.xyxy.cpu().numpy()
             confidences = result.boxes.conf.cpu().numpy()
             
             for box, conf in zip(boxes, confidences):
                 x1, y1, x2, y2 = map(int, box)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(frame, f"Face: {conf:.2f}", (x1, y1-10), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                
+                # Extraire le visage
+                face = frame[y1:y2, x1:x2]
+                
+                # Reconnaissance faciale
+                name, similarity = recognize_face(face)
+                
+                # Dessiner la bounding box et l'annotation
+                color = (0, 255, 0) if name != "Inconnu" else (0, 0, 255)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                
+                label = f"{name} ({similarity*100:.1f}%)" if name != "Inconnu" else f"Inconnu ({similarity*100:.1f}%)"
+                cv2.putText(frame, label, (x1, y1-10), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
         # Encoder en JPEG
         _, encoded_img = cv2.imencode('.jpg', frame)
