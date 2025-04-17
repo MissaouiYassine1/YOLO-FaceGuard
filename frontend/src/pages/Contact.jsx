@@ -7,8 +7,9 @@ import maryem from '../assets/images/team/maryem.png';
 const Contact = () => {
     document.title = "YOLO FaceGuard - Contact";
     return (
+    <div><h1 className="team-title">Notre Équipe</h1>        
       <div className="page contact-page">
-        <h1 className="team-title">Notre Équipe</h1>
+        
         <div className="team-container">
             <div className="member-card">
                 <img src={yassin} alt="Yassin Missaoui" className="member-photo" />
@@ -52,6 +53,7 @@ const Contact = () => {
                 </div>
             </div>
         </div>
+      </div>
       </div>
     );
 };
