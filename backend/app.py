@@ -60,19 +60,15 @@ def save_face_db():
 def enhance_night_image(image):
     # Convertir en LAB pour mieux travailler sur la luminosité
     lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-    l, a, b = cv2.split(lab)
-    
+    l, a, b = cv2.split(lab)   
     # CLAHE (Contrast Limited Adaptive Histogram Equalization)
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-    l_enhanced = clahe.apply(l)
-    
+    l_enhanced = clahe.apply(l)  
     # Fusionner les canaux et reconvertir en BGR
     enhanced_lab = cv2.merge((l_enhanced, a, b))
     enhanced_image = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
-    
     # Réduction du bruit
     denoised_image = cv2.fastNlMeansDenoisingColored(enhanced_image, None, 10, 10, 7, 21)
-    
     return denoised_image
 
 # Fonction pour déterminer si une image est sombre
