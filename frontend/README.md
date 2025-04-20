@@ -86,13 +86,25 @@ Bienvenue dans l'API **YOLO FaceGuard**, une solution intelligente basée sur **
 
 ---
 
-## 📦 À venir
+## 📦 Frontend
 - Suivi vidéo en direct (Webcam).
 - Visualisation graphique des résultats (video frame).
 - Interface utilisateur (frontend léger react vite).
 
 ---
+## Lancer le projet
 
+Pour démarrer le projet en mode fullstack :
+
+1. Ouvrir un terminal.
+2. Se placer dans le dossier `frontend` :## Lancer le projet
+
+Pour démarrer le projet en mode fullstack :
+
+1. Ouvrir un terminal.
+2. Se placer dans le dossier `frontend` : (cd frontend)
+3. Lancer la commande suivante :  npm run start-fullstack
+--- 
 ## 👤 Auteurs
 Missaoui Yassine,Emna Kaaniche et Maryem Kbayer.
 
