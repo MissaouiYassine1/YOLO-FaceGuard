@@ -4,7 +4,6 @@ import {
   IoStop as StopIcon,
   IoPause as PauseIcon,
   IoPlay as PlayIcon,
-  IoSearch as SearchIcon,
   IoStopCircle as StopCircleIcon,
   IoExpand as ResizeIcon,
   IoDownload as DownloadIcon,
@@ -20,7 +19,6 @@ import {
   IoWarning as WarningIcon,
   IoCameraReverse as SwitchCameraIcon
 } from 'react-icons/io5';
-import { detectFaces } from '../api';
 import '../assets/styles/results.scss';
 
 const Results = () => {
@@ -32,19 +30,15 @@ const Results = () => {
   
   // État unifié
   const [state, setState] = useState({
-    // Camera
-    cameraState: 'stopped', // 'stopped' | 'running' | 'paused'
+    cameraState: 'stopped',
     stream: null,
-    activeCamera: 'user', // 'user' | 'environment'
-    
-    // Detection
+    activeCamera: 'user',
+    mirrored: true,
     recognizedFaces: {},
     isDetecting: false,
     fps: 0,
     lastDetectionTime: null,
     frozenDetectionTime: null,
-    
-    // UI
     dimensions: {
       width: '800px',
       height: 'auto',
@@ -54,8 +48,6 @@ const Results = () => {
     presetSize: 'medium',
     showDetectionInfo: false,
     userSelectedSize: null,
-    
-    // System
     apiError: null,
     isProcessing: false,
     detectionCount: 0
@@ -66,6 +58,7 @@ const Results = () => {
     cameraState,
     stream,
     activeCamera,
+    mirrored,
     recognizedFaces,
     isDetecting,
     fps,
@@ -81,26 +74,24 @@ const Results = () => {
     detectionCount
   } = state;
 
-  // Mise à jour optimisée de l'état
+  // Mise à jour de l'état
   const updateState = (newState) => {
     setState(prev => ({ ...prev, ...newState }));
   };
 
-  // Fonction pour envoyer le frame à l'API
+  // Envoi du frame à l'API
   const detectFacesInFrame = async (imageBlob) => {
     try {
       const formData = new FormData();
       formData.append('file', imageBlob, 'frame.jpg');
+      formData.append('mirrored', mirrored.toString());
 
       const response = await fetch('http://localhost:8000/detect', {
         method: 'POST',
         body: formData
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return await response.blob();
     } catch (error) {
       console.error('Detection error:', error);
@@ -108,7 +99,7 @@ const Results = () => {
     }
   };
 
-  // Traitement du frame vidéo avec reconnaissance faciale
+  // Traitement du frame vidéo (version corrigée)
   const processFrame = useCallback(async () => {
     if (!videoRef.current || !isDetecting || cameraState !== 'running') return;
 
@@ -116,41 +107,51 @@ const Results = () => {
       updateState({ isProcessing: true });
       const startTime = performance.now();
 
-      // Capturer le frame
+      // Capture du frame sans transformation miroir
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
       const ctx = canvas.getContext('2d');
+      
+      // Dessiner l'image en fonction de l'état miroir
+      if (mirrored) {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
       ctx.drawImage(videoRef.current, 0, 0);
       
-      // Convertir en Blob
+      // Réinitialiser la transformation
+      if (mirrored) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      }
+
+      // Conversion en Blob
       const blob = await new Promise((resolve) => {
         canvas.toBlob(resolve, 'image/jpeg', 0.85);
       });
 
-      // Envoyer à l'API
+      // Envoi à l'API
       const detectionBlob = await detectFacesInFrame(blob);
       const detectionUrl = URL.createObjectURL(detectionBlob);
       
-      // Afficher le résultat
+      // Affichage du résultat sans appliquer de transformation miroir supplémentaire
       const img = new Image();
       img.onload = () => {
         const ctx = canvasRef.current.getContext('2d');
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
         ctx.drawImage(img, 0, 0);
         
-        // Analyser les visages reconnus (simulation)
-        const imageData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
-        const faces = analyzeDetectedFaces(imageData);
+        // Simulation de détection
+        const faces = {
+          'John Doe': { confidence: 0.92, count: 1 },
+          'Inconnu': { confidence: 0.65, count: 1 }
+        };
         
-        // Mettre à jour l'état
-        const frameTime = performance.now() - startTime;
-        const currentFps = Math.round(1000 / frameTime);
-        
+        // Mise à jour de l'état
         updateState(prev => ({
           isProcessing: false,
           lastDetectionTime: new Date().toLocaleTimeString(),
-          fps: currentFps,
+          fps: Math.round(1000 / (performance.now() - startTime)),
           recognizedFaces: updateRecognizedFaces(prev.recognizedFaces, faces, detectionUrl),
           detectionCount: Object.keys(faces).length
         }));
@@ -166,82 +167,56 @@ const Results = () => {
         isProcessing: false
       });
     }
-  }, [isDetecting, cameraState]);
+  }, [isDetecting, cameraState, mirrored]);
 
-  // Analyser les visages détectés (simplifié)
-  const analyzeDetectedFaces = (imageData) => {
-    // En production, vous récupéreriez ces données de l'API
-    const mockFaces = {
-      'John Doe': { confidence: 0.92, count: 1 },
-      'Inconnu': { confidence: 0.65, count: 1 }
-    };
-    return mockFaces;
-  };
-
-  // Mettre à jour la liste des visages reconnus
+  // Mise à jour des visages reconnus
   const updateRecognizedFaces = (currentFaces, newFaces, imageUrl) => {
     const updated = {...currentFaces};
     const now = new Date().toISOString();
     
     Object.keys(newFaces).forEach(name => {
-      if (!updated[name]) {
-        updated[name] = {
-          count: newFaces[name].count,
-          confidence: newFaces[name].confidence,
-          firstSeen: now,
-          lastSeen: now,
-          image: imageUrl
-        };
-      } else {
-        updated[name] = {
-          ...updated[name],
-          count: updated[name].count + newFaces[name].count,
-          lastSeen: now,
-          confidence: Math.max(updated[name].confidence, newFaces[name].confidence)
-        };
-      }
+      updated[name] = !updated[name] ? {
+        count: newFaces[name].count,
+        confidence: newFaces[name].confidence,
+        firstSeen: now,
+        lastSeen: now,
+        image: imageUrl
+      } : {
+        ...updated[name],
+        count: updated[name].count + newFaces[name].count,
+        lastSeen: now,
+        confidence: Math.max(updated[name].confidence, newFaces[name].confidence)
+      };
     });
     
     return updated;
   };
 
-  // Boucle de détection
-  useEffect(() => {
-    let intervalId;
-    if (isDetecting && cameraState === 'running') {
-      intervalId = setInterval(processFrame, 300); // ~3 FPS
-    }
-    return () => clearInterval(intervalId);
-  }, [isDetecting, cameraState, processFrame]);
-
-  // Démarrer/arrêter la caméra
+  // Gestion de la caméra
   const handleCamera = async (action) => {
     try {
       if (action === 'start' || action === 'switch') {
-        if (!navigator.mediaDevices) {
-          throw new Error("Accès à la caméra non supporté");
-        }
+        if (!navigator.mediaDevices) throw new Error("Accès à la caméra non supporté");
 
-        // Arrêter le flux existant si on switch
         if (action === 'switch' && stream) {
           stream.getTracks().forEach(track => track.stop());
         }
 
-        const constraints = {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { 
             width: { ideal: 1280 },
             height: { ideal: 720 },
             facingMode: activeCamera,
             frameRate: { ideal: 30 }
           }
-        };
+        });
 
-        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
         videoRef.current.srcObject = mediaStream;
-        
         await new Promise((resolve) => {
           videoRef.current.onloadedmetadata = resolve;
         });
+
+        videoRef.current.style.transform = mirrored ? 'scaleX(-1)' : 'scaleX(1)';
 
         updateState({
           stream: mediaStream,
@@ -256,12 +231,8 @@ const Results = () => {
         applyPresetSize(userSelectedSize || 'medium');
       } 
       else if (action === 'stop') {
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-        }
-        if (videoRef.current) {
-          videoRef.current.srcObject = null;
-        }
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        if (videoRef.current) videoRef.current.srcObject = null;
         updateState({
           stream: null,
           cameraState: 'stopped',
@@ -272,10 +243,7 @@ const Results = () => {
       }
       else if (action === 'pause' && stream) {
         stream.getTracks().forEach(track => track.enabled = false);
-        updateState({
-          cameraState: 'paused',
-          isDetecting: false
-        });
+        updateState({ cameraState: 'paused', isDetecting: false });
       }
       else if (action === 'resume' && stream) {
         stream.getTracks().forEach(track => track.enabled = true);
@@ -291,7 +259,7 @@ const Results = () => {
     }
   };
 
-  // Switch entre caméra avant/arrière
+  // Autres fonctions utilitaires
   const switchCamera = () => {
     updateState(prev => ({
       activeCamera: prev.activeCamera === 'user' ? 'environment' : 'user'
@@ -299,7 +267,13 @@ const Results = () => {
     handleCamera('switch');
   };
 
-  // Redimensionnement canvas
+  const toggleMirror = () => {
+    updateState(prev => ({ mirrored: !prev.mirrored }));
+    if (videoRef.current) {
+      videoRef.current.style.transform = mirrored ? 'scaleX(1)' : 'scaleX(-1)';
+    }
+  };
+
   const updateCanvasSize = useCallback(() => {
     if (canvasRef.current && videoRef.current) {
       canvasRef.current.width = videoRef.current.videoWidth;
@@ -307,15 +281,9 @@ const Results = () => {
     }
   }, []);
 
-  // Appliquer une taille prédéfinie
   const applyPresetSize = (size) => {
     const containerWidth = containerRef.current?.parentElement?.clientWidth || 800;
-    const sizes = {
-      small: 0.5,
-      medium: 0.7,
-      large: 0.85,
-      full: 1
-    };
+    const sizes = { small: 0.5, medium: 0.7, large: 0.85, full: 1 };
     
     updateState({
       presetSize: size,
@@ -328,7 +296,6 @@ const Results = () => {
     });
   };
 
-  // Exporter les visages reconnus
   const exportFaces = () => {
     const data = {
       timestamp: new Date().toISOString(),
@@ -345,12 +312,17 @@ const Results = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Effacer tous les visages reconnus
-  const clearFaces = () => {
-    updateState({ recognizedFaces: {} });
-  };
+  const clearFaces = () => updateState({ recognizedFaces: {} });
 
-  // Redimensionnement manuel
+  // Effets
+  useEffect(() => {
+    let intervalId;
+    if (isDetecting && cameraState === 'running') {
+      intervalId = setInterval(processFrame, 300);
+    }
+    return () => clearInterval(intervalId);
+  }, [isDetecting, cameraState, processFrame]);
+
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isResizing || !containerRef.current) return;
@@ -358,12 +330,11 @@ const Results = () => {
       const containerRect = containerRef.current.getBoundingClientRect();
       const maxWidth = containerRef.current.parentElement.clientWidth;
       const newWidth = Math.min(maxWidth, Math.max(300, e.clientX - containerRect.left));
-      const newHeight = newWidth / dimensions.aspectRatio;
       
       updateState({
         dimensions: {
           width: `${newWidth}px`,
-          height: `${newHeight}px`,
+          height: `${newWidth / dimensions.aspectRatio}px`,
           aspectRatio: dimensions.aspectRatio
         },
         presetSize: 'custom'
@@ -383,30 +354,21 @@ const Results = () => {
     };
   }, [isResizing, dimensions.aspectRatio]);
 
-  // Nettoyage
   useEffect(() => {
     return () => {
       if (stream) stream.getTracks().forEach(track => track.stop());
     };
   }, [stream]);
 
+  // Rendu
   return (
     <div className="results-page">
-      {/* Message d'erreur */}
       {apiError && (
         <div className="error-banner" role="alert">
           <WarningIcon size={18} />
           {apiError}
         </div>
       )}
-
-      {/* Overlay de traitement 
-      {isProcessing && (
-        <div className="processing-overlay" aria-live="polite">
-          <div className="processing-spinner"></div>
-          <p>Analyse en cours...</p>
-        </div>
-      )*/}
 
       <header className="page-header">
         <h2>
@@ -431,6 +393,7 @@ const Results = () => {
               <li><strong>Résolution :</strong> 1280×720 (adaptative)</li>
               <li><strong>Performance :</strong> ~3 FPS (optimisé)</li>
               <li><strong>Fonctionnalités :</strong> Reconnaissance, suivi, amélioration nocturne</li>
+              <li><strong>Miroir :</strong> {mirrored ? 'Activé' : 'Désactivé'}</li>
             </ul>
             <button 
               onClick={() => updateState({ showDetectionInfo: false })}
@@ -459,6 +422,7 @@ const Results = () => {
             playsInline 
             muted
             className={`video-preview ${cameraState === 'paused' ? 'paused' : ''}`}
+            style={{ transform: mirrored ? 'scaleX(-1)' : 'scaleX(1)' }}
             aria-label="Flux de la caméra"
           />
           <canvas ref={canvasRef} className="detection-canvas" />
@@ -545,6 +509,15 @@ const Results = () => {
                   <SwitchCameraIcon size={18} className="icon" />
                   Caméra
                 </button>
+
+                {/*<button 
+                  onClick={toggleMirror}
+                  className={`control-btn mirror-btn ${mirrored ? 'active-btn' : ''}`}
+                  aria-label={mirrored ? 'Désactiver le miroir' : 'Activer le miroir'}
+                >
+                  <ImageIcon size={18} className="icon" />
+                  {mirrored ? 'Désactiver miroir' : 'Activer miroir'}
+                </button>*/}
               </div>
               
               <div className="control-group">
@@ -653,7 +626,6 @@ const Results = () => {
                       <RefreshIcon size={12} />
                       Mis à jour il y a {Math.floor((Date.now() - new Date(faceData.lastSeen).getTime()) / 1000)}s
                     </div>
-
                   </div>
                 </div>
               ))}
