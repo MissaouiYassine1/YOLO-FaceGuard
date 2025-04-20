@@ -7,8 +7,9 @@ import maryem from '../assets/images/team/maryem.png';
 const Contact = () => {
     document.title = "YOLO FaceGuard - Contact";
     return (
+    <div><h1 className="team-title">Notre Équipe</h1>        
       <div className="page contact-page">
-        <h1 className="team-title">Notre Équipe</h1>
+        
         <div className="team-container">
             <div className="member-card">
                 <img src={yassin} alt="Yassin Missaoui" className="member-photo" />
@@ -28,7 +29,7 @@ const Contact = () => {
                 <img src={emna} alt="Emna Kaanich" className="member-photo" />
                 <div className="member-info">
                     <h3>Emna Kaanich</h3>
-                    <p className="member-position">Gestionnaire de projet</p>
+                    <p className="member-position">Experte de gestion de projet</p>
                     {/*<p className="member-description">Coordination d'équipe et planification stratégique.</p>*/}
                     <a href="mailto:emna.kaaniche@enis.tn" className="member-email">emna.kaanich@enis.tn</a>
                     {/*<div className="member-social">
@@ -52,6 +53,7 @@ const Contact = () => {
                 </div>
             </div>
         </div>
+      </div>
       </div>
     );
 };
