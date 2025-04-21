@@ -7,7 +7,7 @@ const FAQ = () => {
             <h2>Fonctionnement du système</h2>
             <div className={"video-container"}>
                 <video controls>
-                    <source src="./src/assets/videos/videoExp.mp4" type="video/mp4"/>
+                    <source src="./src/assets/videos/demo.mp4" type="video/mp4"/>
                 </video>
             </div>
             <h2>Problèmes fréquents</h2>
@@ -16,15 +16,17 @@ const FAQ = () => {
                     <h4>Comment fonctionne la version actuelle ? </h4>
                     <ul> Version locale en développement. Utilisez-la pour :
                         <li>Tester la détection faciale et la reconnaissance</li>
+                        <li>Tester l'amélioration d'images nocturnes</li>
                     </ul>
                 </div>
                 <div className={"question"}>
                     <h4>Comment personnaliser ma base de données ? </h4>
-                    <ul> La personnalisation avancée de la base de données n'est pas encore disponible dans cette
-                        version de développement. Dès que cette fonctionnalité sera implémentée,
-                        nous ajouterons un tutoriel vidéo.
+                    <ul> Personnalisez votre base en suivant ces étapes :
+                        <li>Capturer une photo via la caméra</li>
+                        <li>Ou importer une image contenant un visage</li>
                     </ul>
                 </div>
+
                 <div className={"question"}>
                     <h4>Que proposera la version client finale ? </h4>
                     <ul> Une solution gratuite et clé en main pour :
@@ -33,17 +35,11 @@ const FAQ = () => {
                         <li>Analyser des flux vidéo simples</li>
                     </ul>
                 </div>
+                
                 <div className={"question"}>
                     <h4>Un visage n'est pas détecté ?</h4>
                     <ul> Vérifiez:</ul>
-                    <li>La luminosité (évitez les contre-jours).</li>
-                    <li>L’angle de la caméra (face à la personne).</li>
-
-                </div>
-                <div className={"question"}>
-                    <h4>Un visage n'est pas détecté ?</h4>
-                    <ul> Vérifiez:</ul>
-                    <li>La luminosité (évitez les contre-jours).</li>
+                    <li>La luminosité (évitez les images très sombres).</li>
                     <li>L’angle de la caméra (face à la personne).</li>
                     <li>Si le visage est bien enregistré dans la base.</li>
                 </div>
