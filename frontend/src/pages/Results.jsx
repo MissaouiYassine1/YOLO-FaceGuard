@@ -373,7 +373,7 @@ const Results = () => {
       <header className="page-header">
         <h2>
           <CameraIcon size={24} className="header-icon" />
-          Détection Faciale Premium
+          Détection Faciale
         </h2>
         <button 
           onClick={() => updateState({ showDetectionInfo: !showDetectionInfo })}

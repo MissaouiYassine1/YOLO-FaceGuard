@@ -14,6 +14,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import sqlite3
+from datetime import datetime
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO)
@@ -37,12 +39,33 @@ app.add_middleware(
 )
 
 # Chemins de configuration
-FACE_DB_PATH = "face_db.npy"
+FACE_DB_PATH = "face_db.sqlite"
 REGISTERED_FACES_DIR = "registered_faces"
 os.makedirs(REGISTERED_FACES_DIR, exist_ok=True)
 
 # Configuration du thread pool pour les opérations bloquantes
 executor = ThreadPoolExecutor(max_workers=4)
+
+# Initialisation de la base de données SQLite
+def init_db():
+    conn = sqlite3.connect(FACE_DB_PATH)
+    cursor = conn.cursor()
+    
+    # Création des tables si elles n'existent pas
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS faces (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        embedding BLOB NOT NULL,
+        image_paths TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+init_db()
 
 # Chargement des modèles avec cache
 _MODELS = {}
@@ -57,33 +80,69 @@ def load_models():
             raise
     return _MODELS
 
-# Initialisation de la base de données des visages avec cache
-_FACE_DB = None
-def init_face_db():
-    global _FACE_DB
-    if _FACE_DB is None:
-        if os.path.exists(FACE_DB_PATH):
-            try:
-                loaded_db = np.load(FACE_DB_PATH, allow_pickle=True).item()
-                if not isinstance(loaded_db, dict) or "names" not in loaded_db or "embeddings" not in loaded_db:
-                    raise ValueError("Format de base de données invalide")
-                _FACE_DB = loaded_db
-                logger.info("Base de données des visages chargée depuis le fichier")
-            except Exception as e:
-                logger.warning(f"Erreur de chargement de la base de données, initialisation d'une nouvelle : {str(e)}")
-                _FACE_DB = {"names": [], "embeddings": [], "image_paths": []}
-        else:
-            _FACE_DB = {"names": [], "embeddings": [], "image_paths": []}
-    return _FACE_DB
-
-face_db = init_face_db()
 models = load_models()
 
-# Fonction pour sauvegarder la base de données de manière asynchrone
-async def save_face_db():
+# Fonction pour assombrir une image de 30%
+def darken_image(image, factor=0.7):
+    """Assombrit l'image de 30% (factor=0.7)"""
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hsv[..., 2] = hsv[..., 2] * factor
+    return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+# Fonction pour sauvegarder un visage dans la base SQLite
+async def save_face_to_db(name, embedding, image_paths):
     def _save():
-        np.save(FACE_DB_PATH, face_db)
+        conn = sqlite3.connect(FACE_DB_PATH)
+        cursor = conn.cursor()
+        
+        # Convertir l'embedding numpy en bytes
+        embedding_bytes = embedding.tobytes()
+        
+        # Convertir la liste des chemins en string JSON
+        paths_str = ','.join(image_paths)
+        
+        cursor.execute('''
+        INSERT INTO faces (name, embedding, image_paths)
+        VALUES (?, ?, ?)
+        ''', (name, embedding_bytes, paths_str))
+        
+        conn.commit()
+        conn.close()
+    
     await asyncio.get_event_loop().run_in_executor(executor, _save)
+
+# Fonction pour charger tous les visages depuis la base SQLite
+async def load_faces_from_db():
+    def _load():
+        conn = sqlite3.connect(FACE_DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT name, embedding, image_paths FROM faces')
+        rows = cursor.fetchall()
+        
+        names = []
+        embeddings = []
+        image_paths = []
+        
+        for row in rows:
+            name, embedding_bytes, paths_str = row
+            names.append(name)
+            
+            # Convertir bytes en numpy array
+            embedding = np.frombuffer(embedding_bytes, dtype=np.float32).reshape(1, -1)
+            embeddings.append(embedding)
+            
+            image_paths.append(paths_str.split(','))
+        
+        conn.close()
+        
+        return {
+            "names": names,
+            "embeddings": embeddings,
+            "image_paths": image_paths
+        }
+    
+    return await asyncio.get_event_loop().run_in_executor(executor, _load)
 
 # Fonction pour améliorer les images nocturnes avec optimisation
 def enhance_night_image(image):
@@ -112,6 +171,9 @@ def is_dark_image(image, threshold=30):
 # Fonction de reconnaissance faciale optimisée
 async def recognize_face(face_image, threshold=0.6):
     try:
+        # Chargement des visages depuis la base de données
+        face_db = await load_faces_from_db()
+        
         # Conversion et normalisation optimisées
         face_rgb = cv2.cvtColor(face_image, cv2.COLOR_BGR2RGB)
         face_tensor = torch.tensor(face_rgb).permute(2, 0, 1).float().unsqueeze(0) / 255.0
@@ -184,7 +246,7 @@ async def register_face(
                     return None
                 
                 # Sauvegarde de l'image
-                face_id = f"{name.lower().replace(' ', '_')}_{len(face_db['names'])}_{len(saved_images)}"
+                face_id = f"{name.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{len(saved_images)}"
                 face_path = os.path.join(REGISTERED_FACES_DIR, f"{face_id}.jpg")
                 
                 def _save_face():
@@ -218,11 +280,8 @@ async def register_face(
         # Moyenne des embeddings
         avg_embedding = np.mean(embeddings, axis=0)
         
-        # Mise à jour de la base de données
-        face_db["names"].append(name)
-        face_db["embeddings"].append(avg_embedding)
-        face_db["image_paths"].append(saved_images)
-        await save_face_db()
+        # Sauvegarde dans la base SQLite
+        await save_face_to_db(name, avg_embedding, saved_images)
         
         return {
             "status": "success",
@@ -255,6 +314,9 @@ async def detect_faces(file: UploadFile = File(...)):
             def _enhance_image():
                 return enhance_night_image(frame)
             frame = await asyncio.get_event_loop().run_in_executor(executor, _enhance_image)
+        
+        # Option d'assombrissement de l'image (30%)
+        frame = darken_image(frame, factor=0.7)
 
         # Détection des visages
         def _detect_faces():
@@ -304,15 +366,18 @@ async def detect_faces(file: UploadFile = File(...)):
 # Endpoints d'information
 @app.get("/")
 async def read_root():
+    face_db = await load_faces_from_db()
     return {
         "status": "running",
         "faces_registered": len(face_db["names"]),
         "model": "YOLOv8 + FaceNet",
-        "optimized": True
+        "optimized": True,
+        "database": "SQLite3"
     }
 
 @app.get("/registered-faces")
 async def get_registered_faces():
+    face_db = await load_faces_from_db()
     return {
         "count": len(face_db["names"]),
         "names": face_db["names"],
@@ -328,6 +393,6 @@ if __name__ == "__main__":
         port=8000,
         workers=1,  # Pour éviter les problèmes avec les modèles GPU
         loop="uvloop",  # Meilleure performance pour asyncio
-        http="httptools",  #Serveur HTTP plus rapide
+        http="httptools",  # Serveur HTTP plus rapide
         timeout_keep_alive=30  # Réduit le temps de keep-alive
     )
